@@ -1,5 +1,5 @@
 use std::error::Error;
-
+use rand::Rng;
 // 3Dベクトルを扱うためにglamクレートのVec3をインポート
 use glam::{Vec3,Vec4,Mat4};
 
@@ -74,6 +74,7 @@ impl Hittable for Transform {
 enum Material {
     Mirror,
     Glass { ior: f32 },
+    HalfMirror { reflectance: f32 },
 }
 // ============== 3D用の物理計算関数 ==============
 
@@ -625,241 +626,8 @@ impl Hittable for CSGObject {
     }
 }
 
-// --- ここからが2Dプロトタイピング用のコード ---
-/* 
-// 2Dの光線
-#[derive(Debug, Clone, Copy)]
-struct Ray2D {
-    origin: Vec2,
-    direction: Vec2,
-    current_ior: f32, // ★★★ この行を追加 ★★★
-}
-// 2Dの円（レンズや曲面鏡の断面）
-struct Circle {
-    center: Vec2,
-    radius: f32,
-    material: Material, // 材質情報
-}
-
-// 2Dの線分（平面鏡の断面）
-struct LineSegment {
-    p1: Vec2,
-    p2: Vec2,
-    material: Material,
-}
-
-// 2Dの衝突情報
-struct Hit2D {
-    t: f32,
-    point: Vec2,
-    normal: Vec2,
-}
-
-// 材質を定義するenum
-#[derive(Debug, Clone, Copy)]
-enum Material {
-    Mirror,
-    Glass { ior: f32 }, // ior: Index of Refraction (屈折率)
-}
-
-// --- 必要なトレイトとヘルパー関数 ---
-
-trait Hittable2D {
-    fn intersect(&self, ray: &Ray2D) -> Option<Hit2D>;
-    fn get_material(&self) -> Material;
-}
-
-impl Hittable2D for Circle {
-    fn intersect(&self, ray: &Ray2D) -> Option<Hit2D> { intersect_circle(ray, self) }
-    fn get_material(&self) -> Material { self.material }
-}
-
-impl Hittable2D for LineSegment {
-    fn intersect(&self, ray: &Ray2D) -> Option<Hit2D> { intersect_line(ray, self) }
-    fn get_material(&self) -> Material { self.material }
-}
-
-// 2D反射ベクトルを計算する関数
-fn reflect(incident: Vec2, normal: Vec2) -> Vec2 {
-    incident - 2.0 * incident.dot(normal) * normal
-}
-// 2D屈折ベクトルを計算する関数
-// incident: 入射ベクトル, normal: 法線ベクトル, ior_ratio: 屈折率の比 (n1 / n2)
-fn refract(incident: Vec2, normal: Vec2, ior_ratio: f32) -> Option<Vec2> {
-    let cos_theta = (-incident).dot(normal).min(1.0);
-    let sin_theta_squared = 1.0 - cos_theta * cos_theta;
-
-    // 全反射の条件をチェック
-    // 屈折率の比の2乗 * sin^2(theta) > 1.0 なら全反射
-    if ior_ratio * ior_ratio * sin_theta_squared > 1.0 {
-        return None; // 全反射が起きたので、屈折ベクトルは存在しない
-    }
-
-    let perp = ior_ratio * (incident + cos_theta * normal);
-    let parallel = -(1.0 - perp.length_squared()).abs().sqrt() * normal;
-    
-    Some(perp + parallel)
-}
-
-
-// 2Dレイと円の交点を計算する関数
-fn intersect_circle(ray: &Ray2D, circle: &Circle) -> Option<Hit2D> {
-    let oc = ray.origin - circle.center;
-    let a = ray.direction.length_squared();
-    let half_b = oc.dot(ray.direction);
-    let c = oc.length_squared() - circle.radius * circle.radius;
-    let discriminant = half_b * half_b - a * c;
-
-    if discriminant < 0.0 {
-        return None;
-    }
-
-    let sqrtd = discriminant.sqrt();
-    let mut root = (-half_b - sqrtd) / a;
-
-    // 交点が後ろにある場合は、もう一つの解を試す
-    if root < 0.001 {
-        root = (-half_b + sqrtd) / a;
-        if root < 0.001 {
-            return None;
-        }
-    }
-    
-    let t = root;
-    let point = ray.origin + t * ray.direction;
-    let normal = (point - circle.center).normalize();
-    
-    Some(Hit2D { t, point, normal })
-}
-
-// 2Dレイと線分の交点を計算する関数
-fn intersect_line(ray: &Ray2D, line: &LineSegment) -> Option<Hit2D> {
-    let v1 = ray.origin - line.p1;
-    let v2 = line.p2 - line.p1;
-    let v3 = Vec2::new(-ray.direction.y, ray.direction.x);
-
-    let dot_v2_v3 = v2.dot(v3);
-    if dot_v2_v3.abs() < 1e-6 { // 平行な場合
-        return None;
-    }
-
-    let t1 = v2.perp_dot(v1) / dot_v2_v3;
-    let t2 = v1.dot(v3) / dot_v2_v3;
-
-    if t1 >= 0.0 && (0.0..=1.0).contains(&t2) {
-        let point = ray.origin + t1 * ray.direction;
-        let normal = v2.perp().normalize(); // perp()で垂線ベクトルを取得
-        return Some(Hit2D { t: t1, point, normal });
-    }
-
-    None
-}
-*/
-
-// 2Dmain関数
-/* 
-use std::error::Error;
-use csv::Writer;
-
 fn main() -> Result<(), Box<dyn Error>> {
-    // --- 1. シーンのセットアップ ---
-    let mut scene: Vec<Box<dyn Hittable2D>> = Vec::new(); // Hittable2Dトレイトを使う
-
-    // 大きなガラスの円（レンズ）を追加
-    scene.push(Box::new(Circle {
-        center: Vec2::new(20.0, 0.0),
-        radius: 15.0,
-        material: Material::Glass { ior: 1.5 },
-    }));
-
-    // 平面鏡を追加
-    scene.push(Box::new(LineSegment {
-        p1: Vec2::new(30.0, -20.0),
-        p2: Vec2::new(30.0, 20.0),
-        material: Material::Mirror,
-    }));
-
-    // --- 2. 初期光線の設定 ---
-    let mut ray = Ray2D {
-    origin: Vec2::new(-30.0, 5.0),
-    direction: Vec2::new(1.0, 0.0).normalize(),
-    current_ior: 1.0, // ★★★ 初期媒質は空気（屈折率1.0）
-};
-
-    // --- 3. 光路の追跡 ---
-    let mut path_points: Vec<Vec2> = vec![ray.origin]; // 最初の点を記録
-    let max_bounces = 10;
-
-    // main関数内の追跡ループ部分を書き換え
-
-for _ in 0..max_bounces {
-    let mut closest_hit: Option<Hit2D> = None;
-    let mut hit_material = Material::Mirror; // 仮
-
-    // シーン内の全オブジェクトと衝突判定
-    for object in &scene {
-        if let Some(hit) = object.intersect(&ray) {
-            if closest_hit.is_none() || hit.t < closest_hit.as_ref().unwrap().t {
-                closest_hit = Some(hit);
-                hit_material = object.get_material();
-            }
-        }
-    }
-
-    if let Some(hit) = closest_hit {
-        path_points.push(hit.point);
-
-        match hit_material {
-            Material::Mirror => {
-                // 反射のロジックは変更なし
-                let new_direction = reflect(ray.direction, hit.normal);
-                ray.origin = hit.point + new_direction * 0.001;
-                ray.direction = new_direction;
-            }
-            Material::Glass { ior: material_ior } => {
-                let outward_normal: Vec2;
-                let n1: f32;
-                let n2: f32;
-
-                // 光線がオブジェクトの表面・裏面のどちらに当たったか判定
-                if ray.direction.dot(hit.normal) < 0.0 {
-                    // 外から中へ（表面にヒット）
-                    outward_normal = hit.normal;
-                    n1 = ray.current_ior;     // ★ 現在のレイの屈折率を使用
-                    n2 = material_ior;        // ★ 衝突した物体の屈折率
-                } else {
-                    // 中から外へ（裏面にヒット）
-                    outward_normal = -hit.normal; // 法線を反転
-                    n1 = material_ior;        // ★ 現在（物体内）の屈折率
-                    // ★★★ 次の媒質の屈折率をどう知るか？
-                    // ここでは一旦、外側は常に空気(1.0)だと仮定する。
-                    // より高度化するなら、衝突判定が「次にどの媒質に入るか」も返す必要がある。
-                    // しかし、まずはこの仮定で進めるのが現実的。
-                    n2 = 1.0; 
-                }
-
-                let ior_ratio = n1 / n2;
-
-                // 屈折を試みる
-                if let Some(refracted_dir) = refract(ray.direction, outward_normal, ior_ratio) {
-                    // 屈折した場合、次のレイの屈折率を更新
-                    ray.direction = refracted_dir;
-                    ray.current_ior = n2;
-                } else {
-                    // 全反射が起きたので、代わりに反射させる
-                    // この場合、媒質は変わらないので current_ior はそのまま
-                    ray.direction = reflect(ray.direction, hit.normal);
-                }
-                ray.origin = hit.point + ray.direction * 0.001;
-            }
-        }
-    } else {
-        path_points.push(ray.origin + ray.direction * 100.0);
-        break;
-    }
-}
-*/
-fn main() -> Result<(), Box<dyn Error>> {
+    use rand::Rng;
     let mut scene: Vec<Box<dyn Hittable>> = Vec::new();
 
     let glass_material = Material::Glass { ior: 1.5 };
@@ -939,6 +707,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                     ray.direction = reflect(ray.direction, hit.normal);
                 }
             }
+            Material::HalfMirror { reflectance } => {
+                // 0.0から1.0までの一様な乱数を生成
+                if rand::thread_rng().gen::<f32>() < reflectance {
+                    // 反射する場合
+                    ray.direction = reflect(ray.direction, hit.normal);
+                } else {
+                    // 透過する場合（方向は変わらない）
+                    // ray.direction はそのまま
+                }
+            }
         }
         ray.origin = hit.point + ray.direction * 0.001;
     } else {
@@ -966,18 +744,3 @@ println!("可視化スクリプトで結果を確認してください。");
 Ok(())
 }
 
-/* 
-    // --- 4. 2D結果をCSVファイルに出力 ---
-    let mut wtr = Writer::from_path("path_output.csv")?;
-    wtr.write_record(&["x", "y"])?; // ヘッダー
-    for point in path_points {
-        wtr.write_record(&[point.x.to_string(), point.y.to_string()])?;
-    }
-    wtr.flush()?;
-
-    println!("光路を 'path_output.csv' に出力しました。");
-    println!("Python(Matplotlib)やExcelなどで可視化してみてください。");
-
-    Ok(())
-
-*/
