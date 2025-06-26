@@ -1,7 +1,7 @@
 use std::error::Error;
 
 // 3Dベクトルを扱うためにglamクレートのVec3をインポート
-use glam::{Vec3};
+use glam::{Vec3,Vec4,Mat4};
 
 // 光線を表す構造体
 // origin: 始点, direction: 方向
@@ -25,7 +25,52 @@ trait Hittable: Send + Sync { // Send + Sync は並列処理のためのマー�
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>>;
 }
 
-#[derive(Debug, Clone, Copy)]
+// 他のHittableオブジェクトに変換を適用するためのラッパー
+struct Transform {
+    object: Box<dyn Hittable>,
+    transform: Mat4,         // ローカル空間 -> ワールド空間への変換
+    inverse_transform: Mat4, // ワールド空間 -> ローカル空間への変換
+}
+
+impl Transform {
+    pub fn new(object: Box<dyn Hittable>, transform: Mat4) -> Self {
+        Self {
+            object,
+            transform,
+            inverse_transform: transform.inverse(), // 逆行列も保持
+        }
+    }
+}
+
+// TransformのためのHittable実装を追加
+impl Hittable for Transform {
+    fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
+        // 1. レイをワールド空間からオブジェクトのローカル空間へ逆変換
+        let local_ray_origin = self.inverse_transform.transform_point3(ray.origin);
+        let local_ray_direction = self.inverse_transform.transform_vector3(ray.direction);
+        let local_ray = Ray {
+            origin: local_ray_origin,
+            direction: local_ray_direction,
+            current_ior: ray.current_ior,
+        };
+
+        // 2. ローカル空間で、包み込んだオブジェクトとの交差判定を行う
+        if let Some(local_hits) = self.object.intersect_all(&local_ray, t_min, t_max) {
+            // 3. 結果をローカル空間からワールド空間へ変換して返す
+            let world_hits = local_hits.into_iter().map(|mut hit| {
+                hit.point = self.transform.transform_point3(hit.point);
+                // 法線ベクトルの変換は、逆行列の転置行列をかけるのが数学的に正しい
+                hit.normal = self.inverse_transform.transpose().transform_vector3(hit.normal).normalize();
+                hit
+            }).collect();
+            Some(world_hits)
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum Material {
     Mirror,
     Glass { ior: f32 },
@@ -51,6 +96,7 @@ fn refract(incident: Vec3, normal: Vec3, ior_ratio: f32) -> Option<Vec3> {
     
     Some((perp + parallel).normalize())
 }
+
 // ============== 3D形状の実装 ==============
 
 // 球
@@ -149,22 +195,372 @@ impl Hittable for Plane {
     }
 }
 
-// ブーリアン演算の種類
+// 無限円柱
 #[derive(Debug, Clone, Copy)]
+struct InfiniteCylinder {
+    axis_point: Vec3, // 軸上の任意の点
+    axis_dir: Vec3,   // 軸の方向（正規化されていること）
+    radius: f32,
+    material: Material,
+}
+
+impl Hittable for InfiniteCylinder {
+    fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
+        // --- 二次方程式の係数 A, B, C を計算 ---
+        
+        let oc = ray.origin - self.axis_point;
+
+        // ベクトルを軸に平行な成分と垂直な成分に分解する考え方を用いる
+        // D_perp = D - (D・V)V  (Vは軸方向ベクトル)
+        let d_dot_v = ray.direction.dot(self.axis_dir);
+        let d_perp = ray.direction - d_dot_v * self.axis_dir;
+
+        // OC_perp = OC - (OC・V)V
+        let oc_dot_v = oc.dot(self.axis_dir);
+        let oc_perp = oc - oc_dot_v * self.axis_dir;
+
+        let a = d_perp.length_squared();
+        let b = 2.0 * oc_perp.dot(d_perp);
+        let c = oc_perp.length_squared() - self.radius * self.radius;
+
+        // --- 二次方程式を解く ---
+
+        // レイが軸とほぼ平行な場合、ヒットしないか常にヒットする。簡単のためミスとする。
+        if a.abs() < 1e-6 {
+            return None;
+        }
+
+        let discriminant = b * b - 4.0 * a * c;
+        if discriminant < 0.0 {
+            return None; // 実数解なし
+        }
+
+        let sqrtd = discriminant.sqrt();
+        let mut hits = Vec::new();
+
+        // 2つの解を計算
+        let t1 = (-b - sqrtd) / (2.0 * a);
+        let t2 = (-b + sqrtd) / (2.0 * a);
+
+        for &t in &[t1, t2] {
+            if t > t_min && t < t_max {
+                let point = ray.origin + t * ray.direction;
+                
+                // 法線を計算
+                // 軸上の最近接点 = P_axis = axis_point + ((P - axis_point)・axis_dir) * axis_dir
+                // 法線 N = normalize(P - P_axis)
+                let p_minus_a = point - self.axis_point;
+                let projection = p_minus_a.dot(self.axis_dir);
+                let point_on_axis = self.axis_point + projection * self.axis_dir;
+                let outward_normal = (point - point_on_axis).normalize();
+                
+                let front_face = ray.direction.dot(outward_normal) < 0.0;
+                let normal = if front_face { outward_normal } else { -outward_normal };
+
+                hits.push(HitRecord { t, point, normal, front_face, material: self.material });
+            }
+        }
+        
+        if hits.is_empty() { None } else { Some(hits) }
+    }
+}
+
+// 無限円錐
+#[derive(Debug, Clone, Copy)]
+struct InfiniteCone {
+    vertex: Vec3,     // 円錐の頂点
+    axis_dir: Vec3,   // 軸の方向（正規化されていること）
+    cos_angle_sq: f32, // 開き角度のコサインの2乗 (cos^2(α))
+    material: Material,
+}
+
+impl InfiniteCone {
+    // 角度(ラジアン)からcos^2(α)を計算するコンストラクタ
+    pub fn new(vertex: Vec3, axis_dir: Vec3, angle_rad: f32, material: Material) -> Self {
+        Self {
+            vertex,
+            axis_dir: axis_dir.normalize(),
+            cos_angle_sq: angle_rad.cos().powi(2),
+            material,
+        }
+    }
+}
+
+// InfiniteCone のための Hittable 実装
+impl Hittable for InfiniteCone {
+    fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
+        let co = ray.origin - self.vertex; // 頂点からレイの始点へのベクトル
+
+        let d_dot_v = ray.direction.dot(self.axis_dir);
+        let co_dot_v = co.dot(self.axis_dir);
+        
+        // 二次方程式の係数 A, B, C を計算
+        // A = (D・V)^2 - cos^2(α)
+        // B = 2 * [ (D・V)(CO・V) - (D・CO)cos^2(α) ]
+        // C = (CO・V)^2 - (CO・CO)cos^2(α)
+        // (Dは正規化済みなので D・D = 1 と仮定)
+        let a = d_dot_v.powi(2) - self.cos_angle_sq;
+        let b = 2.0 * (d_dot_v * co_dot_v - ray.direction.dot(co) * self.cos_angle_sq);
+        let c = co_dot_v.powi(2) - co.length_squared() * self.cos_angle_sq;
+
+        let discriminant = b * b - 4.0 * a * c;
+        if discriminant < 0.0 {
+            return None; // 実数解なし
+        }
+
+        let sqrtd = discriminant.sqrt();
+        let mut hits = Vec::new();
+
+        // 2つの解を計算
+        let t1 = (-b - sqrtd) / (2.0 * a);
+        let t2 = (-b + sqrtd) / (2.0 * a);
+
+        for &t in &[t1, t2] {
+            if t > t_min && t < t_max {
+                let point = ray.origin + t * ray.direction;
+                
+                // 法線を計算
+                // N = normalize( (P-V) - (1+tan^2(α)) * ((P-V)・V) * V ) を元に計算
+                // より単純な勾配法 N = normalize( (PV・v)v - cos²(α)PV ) を使う
+                let pv = point - self.vertex;
+                let m = pv.dot(self.axis_dir);
+                let outward_normal = (m * self.axis_dir - pv * self.cos_angle_sq).normalize();
+                
+                let front_face = ray.direction.dot(outward_normal) < 0.0;
+                let normal = if front_face { outward_normal } else { -outward_normal };
+
+                hits.push(HitRecord { t, point, normal, front_face, material: self.material });
+            }
+        }
+
+        if hits.is_empty() { None } else { Some(hits) }
+    }
+}
+
+// 軸並行な直方体 (AABB) 対角の座標を指定
+#[derive(Debug, Clone, Copy)]
+struct AxisAlignedBox {
+    min: Vec3, // 3つの軸の最小座標 (x_min, y_min, z_min)
+    max: Vec3, // 3つの軸の最大座標 (x_max, y_max, z_max)
+    material: Material,
+}
+// AxisAlignedBox のための Hittable 実装
+impl Hittable for AxisAlignedBox {
+    fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
+        let mut tmin = t_min;
+        let mut tmax = t_max;
+
+        // 各軸 (X, Y, Z) に対してSlab Testを実行
+        for i in 0..3 {
+            // レイの方向の逆数。ゼロ除算を避ける
+            let inv_d = 1.0 / ray.direction[i];
+            let mut t0 = (self.min[i] - ray.origin[i]) * inv_d;
+            let mut t1 = (self.max[i] - ray.origin[i]) * inv_d;
+            
+            // レイの進行方向に応じて、t0とt1（スラブへの入口と出口）を入れ替える
+            if inv_d < 0.0 {
+                std::mem::swap(&mut t0, &mut t1);
+            }
+
+            // これまで計算された全体の区間と、現在の軸の区間の共通部分を求める
+            tmin = tmin.max(t0);
+            tmax = tmax.min(t1);
+
+            // 共通区間がなくなれば、ヒットしない
+            if tmax <= tmin {
+                return None;
+            }
+        }
+
+        // --- 有効な交差区間 [tmin, tmax] が見つかった ---
+        let mut hits = Vec::new();
+
+        // 最初のヒット (入口)
+        let point1 = ray.origin + tmin * ray.direction;
+        let normal1 = self.calculate_normal(point1);
+        hits.push(HitRecord {
+            t: tmin,
+            point: point1,
+            normal: normal1,
+            front_face: ray.direction.dot(normal1) < 0.0,
+            material: self.material,
+        });
+
+        // 2番目のヒット (出口)
+        let point2 = ray.origin + tmax * ray.direction;
+        let normal2 = -self.calculate_normal(point2); // 出口の法線は内側を向く
+        hits.push(HitRecord {
+            t: tmax,
+            point: point2,
+            normal: normal2,
+            front_face: ray.direction.dot(normal2) < 0.0,
+            material: self.material,
+        });
+        
+        Some(hits)
+    }
+}
+
+// AABBのためのヘルパーメソッド
+impl AxisAlignedBox {
+    // 衝突点から、どの面の法線かを計算する
+    fn calculate_normal(&self, point: Vec3) -> Vec3 {
+        let epsilon = 1e-4;
+        let p_minus_min = point - self.min;
+        let p_minus_max = point - self.max;
+        
+        if p_minus_min.x.abs() < epsilon { return Vec3::NEG_X; }
+        if p_minus_max.x.abs() < epsilon { return Vec3::X; }
+        if p_minus_min.y.abs() < epsilon { return Vec3::NEG_Y; }
+        if p_minus_max.y.abs() < epsilon { return Vec3::Y; }
+        if p_minus_min.z.abs() < epsilon { return Vec3::NEG_Z; }
+        if p_minus_max.z.abs() < epsilon { return Vec3::Z; }
+        
+        Vec3::ZERO // 本来は到達しない
+    }
+}
+
+//レンズプリミティブ
+struct Lens {
+    csg_object: Box<dyn Hittable>,
+}
+// Lens構造体の実装ブロックを追加
+impl Lens {
+    pub fn new(
+        center_thickness: f32,
+        diameter: f32,
+        r1: f32,
+        r2: f32,
+        material: Material,
+    ) -> Self {
+        // --- レンズの形状をCSGで組み立てる ---
+
+        // 1. 2つの球面を定義する
+        // レンズの中心を原点(0,0,0)に、光軸をZ軸に沿って配置する
+        let half_thickness = center_thickness / 2.0;
+
+        // 第1面 (光がZの負方向から来るとして、z = -half_thickness に頂点)
+        let s1 = if r1.is_finite() {
+            let center1 = Vec3::new(0.0, 0.0, -half_thickness + r1);
+            Box::new(Sphere { center: center1, radius: r1.abs(), material }) as Box<dyn Hittable>
+        } else {
+            // 曲率半径が無限大なら、平面
+            Box::new(Plane { point: Vec3::new(0.0, 0.0, -half_thickness), normal: Vec3::Z, material }) as Box<dyn Hittable>
+        };
+
+        // 第2面 (z = +half_thickness に頂点)
+        let s2 = if r2.is_finite() {
+            let center2 = Vec3::new(0.0, 0.0, half_thickness + r2);
+            Box::new(Sphere { center: center2, radius: r2.abs(), material }) as Box<dyn Hittable>
+        } else {
+            Box::new(Plane { point: Vec3::new(0.0, 0.0, half_thickness), normal: Vec3::NEG_Z, material }) as Box<dyn Hittable>
+        };
+
+        // 2つの球面の積集合をとる
+        let infinite_lens = Box::new(CSGObject {
+            left: s1,
+            right: s2,
+            operation: CsgOperation::Intersection,
+        });
+
+        // 2. レンズの直径を制限する円柱を定義
+        let aperture_cylinder = Box::new(InfiniteCylinder {
+            axis_point: Vec3::ZERO,
+            axis_dir: Vec3::Z, // 光軸
+            radius: diameter / 2.0,
+            material, // 材質はダミー
+        });
+
+        // 3. 無限レンズと円柱の積集合をとって、最終的なレンズ形状を完成させる
+        let final_lens = Box::new(CSGObject {
+            left: infinite_lens,
+            right: aperture_cylinder,
+            operation: CsgOperation::Intersection,
+        });
+
+        Lens { csg_object: final_lens }
+    }
+}
+// LensのためのHittable実装を追加
+impl Hittable for Lens {
+    fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
+        self.csg_object.intersect_all(ray, t_min, t_max)
+    }
+}
+//ウェッジ
+struct Wedge {
+    csg_object: Box<dyn Hittable>,
+}
+// Wedge構造体の実装ブロックを追加
+impl Wedge {
+    pub fn new(size: Vec3, wedge_angle_rad: f32, material: Material) -> Self {
+        let width = size.x;
+        let height = size.y;
+        let half_depth = size.z / 2.0;
+
+        // --- 5枚の平面を定義 ---
+        let p1 = Box::new(Plane { // 底面 (y >= 0)
+            point: Vec3::ZERO,
+            normal: Vec3::Y,
+            material,
+        }) as Box<dyn Hittable>;
+
+        let p2 = Box::new(Plane { // 垂直面 (x >= 0)
+            point: Vec3::ZERO,
+            normal: Vec3::X,
+            material,
+        }) as Box<dyn Hittable>;
+        
+        // 傾斜面
+        let angle_cos = wedge_angle_rad.cos();
+        let angle_sin = wedge_angle_rad.sin();
+        let p3 = Box::new(Plane {
+            point: Vec3::ZERO,
+            normal: Vec3::new(-angle_sin, angle_cos, 0.0), // 法線で傾きを表現
+            material,
+        }) as Box<dyn Hittable>;
+
+        let p4 = Box::new(Plane { // 前面キャップ (z <= half_depth)
+            point: Vec3::new(0.0, 0.0, half_depth),
+            normal: Vec3::NEG_Z, // 法線を反転させることで、zが小さい側が「内側」になる
+            material,
+        }) as Box<dyn Hittable>;
+        
+        let p5 = Box::new(Plane { // 背面キャップ (z >= -half_depth)
+            point: Vec3::new(0.0, 0.0, -half_depth),
+            normal: Vec3::Z,
+            material,
+        }) as Box<dyn Hittable>;
+
+        // --- CSGの積集合で5枚の平面を組み合わせる ---
+        let csg1 = Box::new(CSGObject { left: p1, right: p2, operation: CsgOperation::Intersection });
+        let csg2 = Box::new(CSGObject { left: csg1, right: p3, operation: CsgOperation::Intersection });
+        let csg3 = Box::new(CSGObject { left: csg2, right: p4, operation: CsgOperation::Intersection });
+        let final_wedge = Box::new(CSGObject { left: csg3, right: p5, operation: CsgOperation::Intersection });
+
+        Wedge { csg_object: final_wedge }
+    }
+}
+// WedgeのためのHittable実装を追加
+impl Hittable for Wedge {
+    fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
+        self.csg_object.intersect_all(ray, t_min, t_max)
+    }
+}
+
+// ブーリアン演算の種類
+#[derive(Debug, Clone, Copy ,PartialEq)]
 enum CsgOperation {
     Union,        // 和集合
     Intersection, // 積集合
     Difference,   // 差集合
 }
-
 // CSGオブジェクト
 struct CSGObject {
     left: Box<dyn Hittable>,
     right: Box<dyn Hittable>,
     operation: CsgOperation,
 }
-
-// CSGObjectにHittableを実装する
 impl Hittable for CSGObject {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
         // 1. 左右の子オブジェクトとの全ての交点を取得
@@ -177,37 +573,48 @@ impl Hittable for CSGObject {
         all_hits.sort_by(|a, b| a.t.partial_cmp(&b.t).unwrap());
 
         let mut result_hits = Vec::new();
+        
+        // 3. 演算の種類に応じたフィルタリング処理
+        let mut in_left = false;
+        let mut in_right = false;
 
-        // 3. 演算の種類に応じてフィルタリング
-        match self.operation {
-            CsgOperation::Intersection => {
-                let mut in_left = false;
-                let mut in_right = false;
+        for hit in &all_hits {
+            // このヒットがleft/rightどちらの物か判定
+            let hit_is_on_left = hits_left.iter().any(|h| (h.t - hit.t).abs() < 1e-6);
 
-                for hit in &all_hits {
-                    // このヒットがleft/rightどちらの物か判定
-                    let hit_is_on_left = hits_left.iter().any(|h| (h.t - hit.t).abs() < 1e-6);
+            // 演算前の状態を保存
+            let was_inside = match self.operation {
+                CsgOperation::Union => in_left || in_right,
+                CsgOperation::Intersection => in_left && in_right,
+                CsgOperation::Difference => in_left && !in_right,
+            };
 
-                    let was_inside_csg = in_left && in_right;
+            // 内外状態を更新
+            if hit_is_on_left {
+                in_left = !in_left;
+            } else {
+                in_right = !in_right;
+            }
 
-                    // 内外状態を更新
-                    if hit_is_on_left {
-                        in_left = !in_left;
-                    } else {
-                        in_right = !in_right;
-                    }
-
-                    let is_inside_csg = in_left && in_right;
-                    
-                    // CSGオブジェクトへの「出入り」が発生した瞬間か？
-                    if was_inside_csg != is_inside_csg {
-                        result_hits.push(*hit);
-                    }
+            // 演算後の状態を計算
+            let is_inside = match self.operation {
+                CsgOperation::Union => in_left || in_right,
+                CsgOperation::Intersection => in_left && in_right,
+                CsgOperation::Difference => in_left && !in_right,
+            };
+            
+            // 状態が変化した（＝CSGオブジェクトの表面を通過した）なら、そのヒットは有効
+            if was_inside != is_inside {
+                // Differenceの場合、rightオブジェクトの法線は反転させる必要がある
+                if self.operation == CsgOperation::Difference && !hit_is_on_left {
+                    let mut inverted_hit = *hit;
+                    inverted_hit.normal = -hit.normal;
+                    inverted_hit.front_face = !hit.front_face;
+                    result_hits.push(inverted_hit);
+                } else {
+                    result_hits.push(*hit);
                 }
             }
-            CsgOperation::Union => { unimplemented!("Unionは未実装です"); }
-            CsgOperation::Difference => { unimplemented!("Differenceは未実装です"); }
-            _ => unimplemented!(), 
         }
 
         if result_hits.is_empty() {
