@@ -1,8 +1,10 @@
+use crate::{HitRecord, Hittable, Material, Ray};
+use glam::Vec3;
 // 無限円錐
 #[derive(Debug, Clone, Copy)]
-struct InfiniteCone {
-    pub vertex: Vec3,     // 円錐の頂点
-    pub axis_dir: Vec3,   // 軸の方向（正規化されていること）
+pub struct InfiniteCone {
+    pub vertex: Vec3,      // 円錐の頂点
+    pub axis_dir: Vec3,    // 軸の方向（正規化されていること）
     pub cos_angle_sq: f32, // 開き角度のコサインの2乗 (cos^2(α))
     pub material: Material,
 }
@@ -26,7 +28,7 @@ impl Hittable for InfiniteCone {
 
         let d_dot_v = ray.direction.dot(self.axis_dir);
         let co_dot_v = co.dot(self.axis_dir);
-        
+
         // 二次方程式の係数 A, B, C を計算
         // A = (D・V)^2 - cos^2(α)
         // B = 2 * [ (D・V)(CO・V) - (D・CO)cos^2(α) ]
@@ -51,21 +53,35 @@ impl Hittable for InfiniteCone {
         for &t in &[t1, t2] {
             if t > t_min && t < t_max {
                 let point = ray.origin + t * ray.direction;
-                
+
                 // 法線を計算
                 // N = normalize( (P-V) - (1+tan^2(α)) * ((P-V)・V) * V ) を元に計算
                 // より単純な勾配法 N = normalize( (PV・v)v - cos²(α)PV ) を使う
                 let pv = point - self.vertex;
                 let m = pv.dot(self.axis_dir);
                 let outward_normal = (m * self.axis_dir - pv * self.cos_angle_sq).normalize();
-                
-                let front_face = ray.direction.dot(outward_normal) < 0.0;
-                let normal = if front_face { outward_normal } else { -outward_normal };
 
-                hits.push(HitRecord { t, point, normal, front_face, material: self.material });
+                let front_face = ray.direction.dot(outward_normal) < 0.0;
+                let normal = if front_face {
+                    outward_normal
+                } else {
+                    -outward_normal
+                };
+
+                hits.push(HitRecord {
+                    t,
+                    point,
+                    normal,
+                    front_face,
+                    material: self.material,
+                });
             }
         }
 
-        if hits.is_empty() { None } else { Some(hits) }
+        if hits.is_empty() {
+            None
+        } else {
+            Some(hits)
+        }
     }
 }

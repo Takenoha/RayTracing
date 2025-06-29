@@ -1,6 +1,8 @@
+use crate::{HitRecord, Hittable, Material, Ray};
+use glam::Vec3;
 // 無限円柱
 #[derive(Debug, Clone, Copy)]
-struct InfiniteCylinder {
+pub struct InfiniteCylinder {
     pub axis_point: Vec3, // 軸上の任意の点
     pub axis_dir: Vec3,   // 軸の方向（正規化されていること）
     pub radius: f32,
@@ -10,7 +12,7 @@ struct InfiniteCylinder {
 impl Hittable for InfiniteCylinder {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
         // --- 二次方程式の係数 A, B, C を計算 ---
-        
+
         let oc = ray.origin - self.axis_point;
 
         // ベクトルを軸に平行な成分と垂直な成分に分解する考え方を用いる
@@ -48,7 +50,7 @@ impl Hittable for InfiniteCylinder {
         for &t in &[t1, t2] {
             if t > t_min && t < t_max {
                 let point = ray.origin + t * ray.direction;
-                
+
                 // 法線を計算
                 // 軸上の最近接点 = P_axis = axis_point + ((P - axis_point)・axis_dir) * axis_dir
                 // 法線 N = normalize(P - P_axis)
@@ -56,14 +58,28 @@ impl Hittable for InfiniteCylinder {
                 let projection = p_minus_a.dot(self.axis_dir);
                 let point_on_axis = self.axis_point + projection * self.axis_dir;
                 let outward_normal = (point - point_on_axis).normalize();
-                
-                let front_face = ray.direction.dot(outward_normal) < 0.0;
-                let normal = if front_face { outward_normal } else { -outward_normal };
 
-                hits.push(HitRecord { t, point, normal, front_face, material: self.material });
+                let front_face = ray.direction.dot(outward_normal) < 0.0;
+                let normal = if front_face {
+                    outward_normal
+                } else {
+                    -outward_normal
+                };
+
+                hits.push(HitRecord {
+                    t,
+                    point,
+                    normal,
+                    front_face,
+                    material: self.material,
+                });
             }
         }
-        
-        if hits.is_empty() { None } else { Some(hits) }
+
+        if hits.is_empty() {
+            None
+        } else {
+            Some(hits)
+        }
     }
 }

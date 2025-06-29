@@ -1,6 +1,8 @@
+use crate::{HitRecord, Hittable, Material, Ray};
+use glam::Vec3;
 // 軸並行な直方体 (AABB) 対角の座標を指定
 #[derive(Debug, Clone, Copy)]
-struct AxisAlignedBox {
+pub struct AxisAlignedBox {
     pub min: Vec3, // 3つの軸の最小座標 (x_min, y_min, z_min)
     pub max: Vec3, // 3つの軸の最大座標 (x_max, y_max, z_max)
     pub material: Material,
@@ -17,7 +19,7 @@ impl Hittable for AxisAlignedBox {
             let inv_d = 1.0 / ray.direction[i];
             let mut t0 = (self.min[i] - ray.origin[i]) * inv_d;
             let mut t1 = (self.max[i] - ray.origin[i]) * inv_d;
-            
+
             // レイの進行方向に応じて、t0とt1（スラブへの入口と出口）を入れ替える
             if inv_d < 0.0 {
                 std::mem::swap(&mut t0, &mut t1);
@@ -57,7 +59,7 @@ impl Hittable for AxisAlignedBox {
             front_face: ray.direction.dot(normal2) < 0.0,
             material: self.material,
         });
-        
+
         Some(hits)
     }
 }
@@ -69,14 +71,26 @@ impl AxisAlignedBox {
         let epsilon = 1e-4;
         let p_minus_min = point - self.min;
         let p_minus_max = point - self.max;
-        
-        if p_minus_min.x.abs() < epsilon { return Vec3::NEG_X; }
-        if p_minus_max.x.abs() < epsilon { return Vec3::X; }
-        if p_minus_min.y.abs() < epsilon { return Vec3::NEG_Y; }
-        if p_minus_max.y.abs() < epsilon { return Vec3::Y; }
-        if p_minus_min.z.abs() < epsilon { return Vec3::NEG_Z; }
-        if p_minus_max.z.abs() < epsilon { return Vec3::Z; }
-        
+
+        if p_minus_min.x.abs() < epsilon {
+            return Vec3::NEG_X;
+        }
+        if p_minus_max.x.abs() < epsilon {
+            return Vec3::X;
+        }
+        if p_minus_min.y.abs() < epsilon {
+            return Vec3::NEG_Y;
+        }
+        if p_minus_max.y.abs() < epsilon {
+            return Vec3::Y;
+        }
+        if p_minus_min.z.abs() < epsilon {
+            return Vec3::NEG_Z;
+        }
+        if p_minus_max.z.abs() < epsilon {
+            return Vec3::Z;
+        }
+
         Vec3::ZERO // 本来は到達しない
     }
 }

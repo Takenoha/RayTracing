@@ -1,11 +1,84 @@
+use csv::Writer;
+use glam::{Mat4, Vec3}; // 外部クレートのインポート
 use rand::Rng;
-use std::error::Error;
-// 3Dベクトルを扱うためにglamクレートのVec3をインポート
-use glam::{Mat4, Vec3, Vec4};
+use std::error::Error; // 標準ライブラリのインポート
+mod primitives;
+use primitives::*;
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct SceneConfig {
+    rays: Vec<RayConfig>,
+    objects: Vec<ObjectConfig>,
+}
+
+#[derive(Deserialize)]
+struct ObjectConfig {
+    shape: ShapeConfig,
+    material: MaterialConfig,
+    transform: TransformConfig,
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "type")] // TOMLのtype="Lens"などでどのenumかを判断
+enum ShapeConfig {
+    Sphere {
+        radius: f32,
+    },
+    Box {
+        size: [f32; 3],
+    },
+    Plane {
+        normal: [f32; 3],
+    },
+    Cylinder {
+        height: f32,
+        radius: f32,
+    },
+    Cone {
+        angle_deg: f32,
+        height: f32,
+    }, // 有限円錐の定義を追加
+    Wedge {
+        size: [f32; 3],
+        angle_deg: f32,
+    },
+    Lens {
+        thickness: f32,
+        diameter: f32,
+        r1: f32,
+        r2: f32,
+    },
+}
+
+#[derive(Deserialize, Clone)] // 材質はコピーするのでClone, Copyも
+#[serde(untagged)] // "Mirror"のような単純な文字列か、{...}テーブルかを自動判断
+enum MaterialConfig {
+    Mirror {}, // パラメータがない場合は、バリアント名だけでOK
+    Glass { ior: f32 },
+    HalfMirror { reflectance: f32 },
+}
+
+#[derive(Deserialize, Clone, Copy)]
+struct GlassConfig {
+    ior: f32,
+}
+
+#[derive(Deserialize)]
+struct TransformConfig {
+    position: [f32; 3],
+    rotation_y_deg: f32,
+}
+
+#[derive(Deserialize)]
+struct RayConfig {
+    origin: [f32; 3],
+    direction: [f32; 3],
+}
 
 // 光線を表す構造体
 // origin: 始点, direction: 方向
-struct Ray {
+pub struct Ray {
     origin: Vec3,
     direction: Vec3,
     current_ior: f32,
@@ -13,7 +86,7 @@ struct Ray {
 
 // 衝突（ヒット）に関する情報をまとめる構造体
 #[derive(Debug, Clone, Copy)]
-struct HitRecord {
+pub struct HitRecord {
     t: f32,
     point: Vec3,
     normal: Vec3,
@@ -21,12 +94,12 @@ struct HitRecord {
     material: Material,
 }
 
-trait Hittable {
+pub trait Hittable {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Material {
+pub enum Material {
     Mirror,
     Glass { ior: f32 },
     HalfMirror { reflectance: f32 },
@@ -55,172 +128,194 @@ fn refract(incident: Vec3, normal: Vec3, ior_ratio: f32) -> Option<Vec3> {
 
 // ブーリアン演算の種類
 #[derive(Debug, Copy, Clone, PartialEq)]
-enum CsgOperation {
+pub enum CsgOperation {
     Union,        // 和集合
     Intersection, // 積集合
     Difference,   // 差集合
 }
 
-// CSGオブジェクト
-struct CSGObject {
-    left: Box<dyn Hittable>,
-    right: Box<dyn Hittable>,
-    operation: CsgOperation,
-}
-
-impl Hittable for CSGObject {
-    fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
-        // 1. 左右の子オブジェクトとの全ての交点を取得
-        let hits_left = self
-            .left
-            .intersect_all(ray, t_min, t_max)
-            .unwrap_or_default();
-        let hits_right = self
-            .right
-            .intersect_all(ray, t_min, t_max)
-            .unwrap_or_default();
-
-        // 2. 全てのヒットを一つのリストにまとめ、tでソート
-        let mut all_hits = hits_left.clone();
-        all_hits.extend(hits_right.clone());
-        all_hits.sort_by(|a, b| a.t.partial_cmp(&b.t).unwrap());
-
-        let mut result_hits = Vec::new();
-
-        // 3. 演算の種類に応じたフィルタリング処理
-        let mut in_left = false;
-        let mut in_right = false;
-
-        for hit in &all_hits {
-            // このヒットがleft/rightどちらの物か判定
-            let hit_is_on_left = hits_left.iter().any(|h| (h.t - hit.t).abs() < 1e-6);
-
-            // 演算前の状態を保存
-            let was_inside = match self.operation {
-                CsgOperation::Union => in_left || in_right,
-                CsgOperation::Intersection => in_left && in_right,
-                CsgOperation::Difference => in_left && !in_right,
-            };
-
-            // 内外状態を更新
-            if hit_is_on_left {
-                in_left = !in_left;
-            } else {
-                in_right = !in_right;
-            }
-
-            // 演算後の状態を計算
-            let is_inside = match self.operation {
-                CsgOperation::Union => in_left || in_right,
-                CsgOperation::Intersection => in_left && in_right,
-                CsgOperation::Difference => in_left && !in_right,
-            };
-
-            // 状態が変化した（＝CSGオブジェクトの表面を通過した）なら、そのヒットは有効
-            if was_inside != is_inside {
-                // Differenceの場合、rightオブジェクトの法線は反転させる必要がある
-                if self.operation == CsgOperation::Difference && !hit_is_on_left {
-                    let mut inverted_hit = *hit;
-                    inverted_hit.normal = -hit.normal;
-                    inverted_hit.front_face = !hit.front_face;
-                    result_hits.push(inverted_hit);
-                } else {
-                    result_hits.push(*hit);
-                }
-            }
-        }
-
-        if result_hits.is_empty() {
-            None
-        } else {
-            Some(result_hits)
-        }
-    }
-}
-
 fn main() -> Result<(), Box<dyn Error>> {
-    use rand::Rng;
+    println!("設定ファイル scene.toml を読み込んでいます...");
+    let toml_str = std::fs::read_to_string("scene.toml")?;
+    let scene_config: SceneConfig = toml::from_str(&toml_str)?;
+
     let mut scene: Vec<Box<dyn Hittable>> = Vec::new();
 
-    // --- 2. 初期光線の設定 ---
-    let mut ray = Ray {
-        origin: Vec3::new(-20.0, 2.0, 0.0),
-        direction: Vec3::new(1.0, 0.0, 0.0).normalize(),
-        current_ior: 1.0, // 空気からスタート
-    };
+    // --- 読み込んだ設定から動的にオブジェクトを構築 ---
+    for object_config in scene_config.objects {
+        let material = match object_config.material {
+            MaterialConfig::Mirror {} => Material::Mirror,
+            MaterialConfig::Glass { ior } => Material::Glass { ior },
+            MaterialConfig::HalfMirror { reflectance } => Material::HalfMirror { reflectance },
+        };
 
-    // --- 3. 光路の追跡 ---
-    let mut path_points: Vec<Vec3> = vec![ray.origin];
-    let max_bounces = 10;
+        let primitive: Box<dyn Hittable> = match object_config.shape {
+            ShapeConfig::Sphere { radius } => Box::new(Sphere {
+                center: Vec3::ZERO,
+                radius,
+                material,
+            }),
+            ShapeConfig::Box { size } => {
+                let s = Vec3::from_array(size) / 2.0;
+                Box::new(AxisAlignedBox {
+                    min: -s,
+                    max: s,
+                    material,
+                })
+            }
+            ShapeConfig::Plane { normal } => Box::new(Plane {
+                point: Vec3::ZERO,
+                normal: Vec3::from_array(normal),
+                material,
+            }),
+            ShapeConfig::Cylinder { height, radius } => {
+                let half_height = height / 2.0;
+                let body = Box::new(InfiniteCylinder {
+                    axis_point: Vec3::ZERO,
+                    axis_dir: Vec3::Y,
+                    radius,
+                    material,
+                });
+                let cap_top = Box::new(Plane {
+                    point: Vec3::new(0.0, half_height, 0.0),
+                    normal: Vec3::NEG_Y,
+                    material,
+                });
+                let cap_bottom = Box::new(Plane {
+                    point: Vec3::new(0.0, -half_height, 0.0),
+                    normal: Vec3::Y,
+                    material,
+                });
+                let capped_cylinder = Box::new(CSGObject {
+                    left: body,
+                    right: cap_top,
+                    operation: CsgOperation::Intersection,
+                });
+                Box::new(CSGObject {
+                    left: capped_cylinder,
+                    right: cap_bottom,
+                    operation: CsgOperation::Intersection,
+                })
+            }
+            ShapeConfig::Cone { angle_deg, height } => {
+                let cone = Box::new(InfiniteCone::new(
+                    Vec3::ZERO,
+                    Vec3::Y,
+                    angle_deg.to_radians(),
+                    material,
+                ));
+                let cap = Box::new(Plane {
+                    point: Vec3::new(0.0, height, 0.0),
+                    normal: Vec3::NEG_Y,
+                    material,
+                });
+                Box::new(CSGObject {
+                    left: cone,
+                    right: cap,
+                    operation: CsgOperation::Intersection,
+                })
+            }
+            ShapeConfig::Wedge { size, angle_deg } => Box::new(Wedge::new(
+                Vec3::from_array(size),
+                angle_deg.to_radians(),
+                material,
+            )),
+            ShapeConfig::Lens {
+                thickness,
+                diameter,
+                r1,
+                r2,
+            } => Box::new(Lens::new(thickness, diameter, r1, r2, material)),
+        };
 
-    for _ in 0..max_bounces {
-        let mut closest_hit_record: Option<HitRecord> = None;
-        let mut t_closest = f32::INFINITY;
+        // Transformを適用
+        let transform_config = object_config.transform;
+        let translation = Mat4::from_translation(Vec3::from_array(transform_config.position));
+        let rotation = Mat4::from_rotation_y(transform_config.rotation_y_deg.to_radians());
+        let transform_matrix = translation * rotation;
 
-        for object in &scene {
-            if let Some(hits) = object.intersect_all(&ray, 0.001, t_closest) {
-                if let Some(first_hit) = hits.first() {
-                    if first_hit.t < t_closest {
-                        t_closest = first_hit.t;
-                        closest_hit_record = Some(*first_hit);
+        scene.push(Box::new(Transform::new(primitive, transform_matrix)));
+    }
+
+    // --- 3. 初期光線の設定
+    for (i, ray_config) in scene_config.rays.iter().enumerate() {
+        // --- 3a. 初期光線の設定 ---
+        let mut ray = Ray {
+            origin: Vec3::from_array(ray_config.origin),
+            direction: Vec3::from_array(ray_config.direction).normalize(),
+            current_ior: 1.0,
+        };
+
+        // --- 3b. 光路の追跡 ---
+        let mut path_points: Vec<Vec3> = vec![ray.origin];
+        let max_bounces = 10;
+
+        for _ in 0..max_bounces {
+            let mut closest_hit_record: Option<HitRecord> = None;
+            let mut t_closest = f32::INFINITY;
+
+            for object in &scene {
+                if let Some(hits) = object.intersect_all(&ray, 0.001, t_closest) {
+                    if let Some(first_hit) = hits.first() {
+                        if first_hit.t < t_closest {
+                            t_closest = first_hit.t;
+                            closest_hit_record = Some(*first_hit);
+                        }
                     }
                 }
             }
-        }
 
-        if let Some(hit) = closest_hit_record {
-            path_points.push(hit.point);
+            if let Some(hit) = closest_hit_record {
+                path_points.push(hit.point);
 
-            let material = hit.material; // HitRecordから直接マテリアルを取得！
+                let material = hit.material; // HitRecordから直接マテリアルを取得！
 
-            match material {
-                Material::Mirror => {
-                    ray.direction = reflect(ray.direction, hit.normal);
-                }
-                Material::Glass { ior: material_ior } => {
-                    let n1 = ray.current_ior;
-                    let n2 = if hit.front_face { material_ior } else { 1.0 };
-                    let ior_ratio = n1 / n2;
-
-                    if let Some(refracted_dir) = refract(ray.direction, hit.normal, ior_ratio) {
-                        ray.direction = refracted_dir;
-                        ray.current_ior = n2;
-                    } else {
+                match material {
+                    Material::Mirror => {
                         ray.direction = reflect(ray.direction, hit.normal);
                     }
-                }
-                Material::HalfMirror { reflectance } => {
-                    // 0.0から1.0までの一様な乱数を生成
-                    if rand::thread_rng().gen::<f32>() < reflectance {
-                        // 反射する場合
-                        ray.direction = reflect(ray.direction, hit.normal);
-                    } else {
-                        // 透過する場合（方向は変わらない）
-                        // ray.direction はそのまま
+                    Material::Glass { ior: material_ior } => {
+                        let n1 = ray.current_ior;
+                        let n2 = if hit.front_face { material_ior } else { 1.0 };
+                        let ior_ratio = n1 / n2;
+
+                        if let Some(refracted_dir) = refract(ray.direction, hit.normal, ior_ratio) {
+                            ray.direction = refracted_dir;
+                            ray.current_ior = n2;
+                        } else {
+                            ray.direction = reflect(ray.direction, hit.normal);
+                        }
+                    }
+                    Material::HalfMirror { reflectance } => {
+                        // 0.0から1.0までの一様な乱数を生成
+                        if rand::thread_rng().gen::<f32>() < reflectance {
+                            // 反射する場合
+                            ray.direction = reflect(ray.direction, hit.normal);
+                        } else {
+                            // 透過する場合（方向は変わらない）
+                            // ray.direction はそのまま
+                        }
                     }
                 }
+                ray.origin = hit.point + ray.direction * 0.001;
+            } else {
+                path_points.push(ray.origin + ray.direction * 200.0);
+                break;
             }
-            ray.origin = hit.point + ray.direction * 0.001;
-        } else {
-            path_points.push(ray.origin + ray.direction * 200.0);
-            break;
         }
+        // --- 3c. 結果を光路ごとに別々のCSVファイルに出力 ---
+        let file_name = format!("path_{}.csv", i);
+        let mut wtr = Writer::from_path(&file_name)?;
+        wtr.write_record(&["x", "y", "z"])?;
+        for point in path_points {
+            wtr.write_record(&[
+                point.x.to_string(),
+                point.y.to_string(),
+                point.z.to_string(),
+            ])?;
+        }
+        wtr.flush()?;
+        println!("光路 {} を '{}' に出力しました。", i, file_name);
     }
-
-    // --- 4. 結果をCSVファイルに出力 ---
-    let mut wtr = csv::Writer::from_path("path_3d.csv")?;
-    wtr.write_record(&["x", "y", "z"])?; // ヘッダー
-    for point in path_points {
-        wtr.write_record(&[
-            point.x.to_string(),
-            point.y.to_string(),
-            point.z.to_string(),
-        ])?;
-    }
-    wtr.flush()?;
-
-    println!("3D光路を 'path_3d.csv' に出力しました。");
-    println!("可視化スクリプトで結果を確認してください。");
-
     Ok(())
 }

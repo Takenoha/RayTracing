@@ -1,0 +1,14 @@
+# 全てのプリミティブを使ったデモシーン
+
+# [[rays]] : シーンの中心を狙う光線を1本定義
+[[rays]]
+origin = [1.0, 0.0, 0.0]
+direction = [1.0, 0.0, 0.0]
+
+# [[objects]] : シーン内のオブジェクトを定義
+
+[[objects]]
+# 球 (Sphere)
+shape = { type = "Sphere", radius = 4.0 }
+material = { type = "Glass", ior = 1.52 }
+transform = { position = [10.0, 0.0, 0.0], rotation_y_deg = 0.0 }

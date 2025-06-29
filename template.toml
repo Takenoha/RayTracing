@@ -1,0 +1,31 @@
+
+[[objects]]
+# 軸並行直方体 (Box)
+shape = { type = "Box", size = [6.0, 12.0, 8.0] }
+material = { type = "Glass", ior = 1.52 }
+# Transformで回転させて、傾いた直方体にする
+transform = { position = [0.0, 0.0, -15.0], rotation_y_deg = 25.0 }
+
+[[objects]]
+# 有限円柱 (Cylinder) - CSGで組み立てる
+shape = { type = "Cylinder", height = 20.0, radius = 1.0 }
+material = { type = "Mirror" }
+transform = { position = [10.0, 0.0, 15.0], rotation_y_deg = 0.0 }
+
+[[objects]]
+# ウェッジ (Wedge)
+shape = { type = "Wedge", size = [10.0, 8.0, 4.0], angle_deg = 15.0 }
+material = { type = "Glass", ior = 1.52 }
+transform = { position = [18.0, 0.0, 0.0], rotation_y_deg = -90.0 }
+
+[[objects]]
+# レンズ (Lens)
+shape = { type = "Lens", thickness = 2.0, diameter = 18.0, r1 = 20.0, r2 = -20.0 }
+material = { type = "Glass", ior = 1.52 }
+transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
+
+[[objects]]
+# 床の鏡 (Plane)
+shape = { type = "Plane", normal = [0.0, 1.0, 0.0] }
+material = { type = "Mirror" }
+transform = { position = [0.0, -10.0, 0.0], rotation_y_deg = 0.0 }

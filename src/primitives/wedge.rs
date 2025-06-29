@@ -1,5 +1,7 @@
+use crate::{CSGObject, CsgOperation, HitRecord, Hittable, Material, Plane, Ray};
+use glam::Vec3;
 //ウェッジ
-struct Wedge {
+pub struct Wedge {
     pub csg_object: Box<dyn Hittable>,
 }
 // Wedge構造体の実装ブロックを追加
@@ -10,18 +12,20 @@ impl Wedge {
         let half_depth = size.z / 2.0;
 
         // --- 5枚の平面を定義 ---
-        let p1 = Box::new(Plane { // 底面 (y >= 0)
+        let p1 = Box::new(Plane {
+            // 底面 (y >= 0)
             point: Vec3::ZERO,
             normal: Vec3::Y,
             material,
         }) as Box<dyn Hittable>;
 
-        let p2 = Box::new(Plane { // 垂直面 (x >= 0)
+        let p2 = Box::new(Plane {
+            // 垂直面 (x >= 0)
             point: Vec3::ZERO,
             normal: Vec3::X,
             material,
         }) as Box<dyn Hittable>;
-        
+
         // 傾斜面
         let angle_cos = wedge_angle_rad.cos();
         let angle_sin = wedge_angle_rad.sin();
@@ -31,25 +35,45 @@ impl Wedge {
             material,
         }) as Box<dyn Hittable>;
 
-        let p4 = Box::new(Plane { // 前面キャップ (z <= half_depth)
+        let p4 = Box::new(Plane {
+            // 前面キャップ (z <= half_depth)
             point: Vec3::new(0.0, 0.0, half_depth),
             normal: Vec3::NEG_Z, // 法線を反転させることで、zが小さい側が「内側」になる
             material,
         }) as Box<dyn Hittable>;
-        
-        let p5 = Box::new(Plane { // 背面キャップ (z >= -half_depth)
+
+        let p5 = Box::new(Plane {
+            // 背面キャップ (z >= -half_depth)
             point: Vec3::new(0.0, 0.0, -half_depth),
             normal: Vec3::Z,
             material,
         }) as Box<dyn Hittable>;
 
         // --- CSGの積集合で5枚の平面を組み合わせる ---
-        let csg1 = Box::new(CSGObject { left: p1, right: p2, operation: CsgOperation::Intersection });
-        let csg2 = Box::new(CSGObject { left: csg1, right: p3, operation: CsgOperation::Intersection });
-        let csg3 = Box::new(CSGObject { left: csg2, right: p4, operation: CsgOperation::Intersection });
-        let final_wedge = Box::new(CSGObject { left: csg3, right: p5, operation: CsgOperation::Intersection });
+        let csg1 = Box::new(CSGObject {
+            left: p1,
+            right: p2,
+            operation: CsgOperation::Intersection,
+        });
+        let csg2 = Box::new(CSGObject {
+            left: csg1,
+            right: p3,
+            operation: CsgOperation::Intersection,
+        });
+        let csg3 = Box::new(CSGObject {
+            left: csg2,
+            right: p4,
+            operation: CsgOperation::Intersection,
+        });
+        let final_wedge = Box::new(CSGObject {
+            left: csg3,
+            right: p5,
+            operation: CsgOperation::Intersection,
+        });
 
-        Wedge { csg_object: final_wedge }
+        Wedge {
+            csg_object: final_wedge,
+        }
     }
 }
 // WedgeのためのHittable実装を追加
