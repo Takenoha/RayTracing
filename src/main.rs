@@ -20,7 +20,7 @@ struct ObjectConfig {
 }
 
 #[derive(Deserialize)]
-#[serde(tag = "type")] // TOMLのtype="Lens"などでどのenumかを判断
+#[serde(tag = "type")]
 enum ShapeConfig {
     Sphere {
         radius: f32,
@@ -51,10 +51,10 @@ enum ShapeConfig {
     },
 }
 
-#[derive(Deserialize, Clone)] // 材質はコピーするのでClone, Copyも
-#[serde(untagged)] // "Mirror"のような単純な文字列か、{...}テーブルかを自動判断
+#[derive(Deserialize, Clone, Copy)] // 材質はコピーするのでClone, Copyも
+#[serde(tag = "type")]
 enum MaterialConfig {
-    Mirror {}, // パラメータがない場合は、バリアント名だけでOK
+    Mirror,
     Glass { ior: f32 },
     HalfMirror { reflectance: f32 },
 }
@@ -258,6 +258,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             for object in &scene {
                 if let Some(hits) = object.intersect_all(&ray, 0.001, t_closest) {
+                    print!("{:?}", hits);
                     if let Some(first_hit) = hits.first() {
                         if first_hit.t < t_closest {
                             t_closest = first_hit.t;
