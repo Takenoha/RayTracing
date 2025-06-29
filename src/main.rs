@@ -78,6 +78,7 @@ struct RayConfig {
 
 // 光線を表す構造体
 // origin: 始点, direction: 方向
+#[derive(Debug)]
 pub struct Ray {
     origin: Vec3,
     direction: Vec3,
@@ -117,6 +118,7 @@ fn refract(incident: Vec3, normal: Vec3, ior_ratio: f32) -> Option<Vec3> {
     let sin_theta_squared = 1.0 - cos_theta * cos_theta;
 
     if ior_ratio * ior_ratio * sin_theta_squared > 1.0 {
+        println!("全反射が発生しました！ ior_ratio: {}", ior_ratio);
         return None; // 全反射
     }
 
@@ -264,7 +266,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     }
                 }
             }
-
+            //print!("{:?}", closest_hit_record);
             if let Some(hit) = closest_hit_record {
                 path_points.push(hit.point);
 
@@ -319,3 +321,130 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     Ok(())
 }
+
+/*
+// main関数を一時的に以下に置き換えてテストする
+fn main() -> Result<(), Box<dyn Error>> {
+    // --- 1. シーンのセットアップ ---
+    // テストしやすいように、原点にあるガラス球だけを置く
+    let mut scene: Vec<Box<dyn Hittable>> = Vec::new();
+    let glass_sphere = Box::new(Sphere {
+        center: Vec3::ZERO,
+        radius: 5.0,
+        material: Material::Glass { ior: 1.5 },
+    });
+    scene.push(glass_sphere);
+
+    // --- 2. 初期光線の設定 ---
+    let mut ray = Ray {
+        origin: Vec3::new(-10.0, 2.0, 0.0),
+        direction: Vec3::X, // X軸の正方向
+        current_ior: 1.0,   // 空気からスタート
+    };
+
+    // --- 3. 光路の追跡（2回限定）---
+    let mut path_points: Vec<Vec3> = vec![ray.origin];
+    println!("追跡開始: {:?}", ray);
+
+    // ==================== 1回目の衝突計算 ====================
+    println!("\n--- 1回目の衝突計算 ---");
+    let mut closest_hit_record: Option<HitRecord> = None;
+    let mut t_closest = f32::INFINITY;
+
+    for object in &scene {
+        if let Some(hits) = object.intersect_all(&ray, 0.001, t_closest) {
+            if let Some(first_hit) = hits.first() {
+                t_closest = first_hit.t;
+                closest_hit_record = Some(*first_hit);
+            }
+        }
+    }
+
+    if let Some(hit) = closest_hit_record {
+        println!("衝突成功！（入口）");
+        println!("  - 衝突点: {:?}", hit.point);
+        println!("  - 法線: {:?}", hit.normal);
+        println!("  - front_face: {}", hit.front_face);
+
+        path_points.push(hit.point);
+        let material = hit.material;
+
+        if let Material::Glass { ior: material_ior } = material {
+            let n1 = ray.current_ior;
+            let n2 = if hit.front_face { material_ior } else { 1.0 };
+            let ior_ratio = n1 / n2;
+
+            println!("  - 屈折率: {} -> {}", n1, n2);
+
+            if let Some(refracted_dir) = refract(ray.direction, hit.normal, ior_ratio) {
+                println!("  - 屈折成功！");
+                ray.direction = refracted_dir;
+                ray.current_ior = n2; // 媒質情報を更新
+            } else {
+                println!("  - 全反射発生！");
+                ray.direction = reflect(ray.direction, hit.normal);
+            }
+        }
+        ray.origin = hit.point + ray.direction * 0.001; // 次の始点を設定
+        println!("新しいレイ（内部）: {:?}", ray);
+    } else {
+        println!("1回目の衝突が見つかりませんでした。追跡を終了します。");
+        return Ok(());
+    }
+
+    // ==================== 2回目の衝突計算 ====================
+    println!("\n--- 2回目の衝突計算 ---");
+    closest_hit_record = None;
+    t_closest = f32::INFINITY;
+
+    for object in &scene {
+        if let Some(hits) = object.intersect_all(&ray, 0.001, t_closest) {
+            if let Some(first_hit) = hits.first() {
+                t_closest = first_hit.t;
+                closest_hit_record = Some(*first_hit);
+            }
+        }
+    }
+
+    if let Some(hit) = closest_hit_record {
+        println!("衝突成功！（出口）");
+        println!("  - 衝突点: {:?}", hit.point);
+        println!("  - 法線: {:?}", hit.normal);
+        println!("  - front_face: {}", hit.front_face);
+
+        path_points.push(hit.point);
+        let material = hit.material;
+
+        if let Material::Glass { ior: material_ior } = material {
+            let n1 = ray.current_ior;
+            let n2 = if hit.front_face { material_ior } else { 1.0 };
+            let ior_ratio = n1 / n2;
+
+            println!("  - 屈折率: {} -> {}", n1, n2);
+
+            if let Some(refracted_dir) = refract(ray.direction, hit.normal, ior_ratio) {
+                println!("  - 屈折成功！");
+                ray.direction = refracted_dir;
+                ray.current_ior = n2;
+            } else {
+                println!("  - 全反射発生！");
+                ray.direction = reflect(ray.direction, hit.normal);
+            }
+        }
+        ray.origin = hit.point + ray.direction * 0.001;
+        path_points.push(ray.origin + ray.direction * 20.0); // 最後の光路を長く描画
+        println!("最終的なレイ（外部）: {:?}", ray);
+    } else {
+        println!("2回目の衝突が見つかりませんでした。");
+        path_points.push(ray.origin + ray.direction * 20.0);
+    }
+
+    // --- 4. 結果をコンソールに出力 ---
+    println!("\n最終的な光路座標:");
+    for (i, point) in path_points.iter().enumerate() {
+        println!("  {}: ({:.3}, {:.3}, {:.3})", i, point.x, point.y, point.z);
+    }
+
+    Ok(())
+}
+*/

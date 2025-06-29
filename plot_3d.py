@@ -29,10 +29,10 @@ plt.axhline(y=-15, color='dimgray', linewidth=3, label='Mirror Plane')
 
 # --- 光路を描画 ---
 # 'x'と'y'の列だけを使ってプロット（Z軸を無視してXY平面に射影）
-plt.plot(df['x'], df['y'], marker='o', markersize=4, linestyle='-', color='red', label='Ray Path (XY Projection)')
+plt.plot(df['x'], df['z'], marker='o', markersize=4, linestyle='-', color='red', label='Ray Path (XZ Projection)')
 
 # 始点に印をつける
-plt.plot(df['x'].iloc[0], df['y'].iloc[0], 'go', markersize=10, label='Start Point')
+plt.plot(df['x'].iloc[0], df['z'].iloc[0], 'go', markersize=10, label='Start Point')
 
 # --- グラフの体裁を整える ---
 plt.xlabel('X coordinate')
