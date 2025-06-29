@@ -7,7 +7,14 @@ use primitives::*;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
+struct SimulationSettingsConfig {
+    infinity_distance: f32,
+    max_bounces: u32,
+}
+
+#[derive(Deserialize)]
 struct SceneConfig {
+    simulation_settings: SimulationSettingsConfig,
     rays: Vec<RayConfig>,
     objects: Vec<ObjectConfig>,
 }
@@ -54,9 +61,9 @@ enum ShapeConfig {
 #[derive(Deserialize, Clone, Copy)] // 材質はコピーするのでClone, Copyも
 #[serde(tag = "type")]
 enum MaterialConfig {
-    Mirror,
     Glass { ior: f32 },
     HalfMirror { reflectance: f32 },
+    Mirror,
 }
 
 #[derive(Deserialize, Clone, Copy)]
@@ -250,7 +257,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         // --- 3b. 光路の追跡 ---
         let mut path_points: Vec<Vec3> = vec![ray.origin];
-        let max_bounces = 10;
+        let settings = &scene_config.simulation_settings;
+        let max_bounces = settings.max_bounces;
+        let infinity_distance = settings.infinity_distance;
 
         for _ in 0..max_bounces {
             let mut closest_hit_record: Option<HitRecord> = None;
@@ -302,7 +311,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
                 ray.origin = hit.point + ray.direction * 0.001;
             } else {
-                path_points.push(ray.origin + ray.direction * 200.0);
+                path_points.push(ray.origin + ray.direction * infinity_distance);
                 break;
             }
         }

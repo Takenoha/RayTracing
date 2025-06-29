@@ -113,7 +113,7 @@ for obj in scene_config.get('objects', []):
 for i, file_path in enumerate(path_files):
     df = pd.read_csv(file_path)
     label = 'Ray Path' if i == 0 else None
-    
+    print(df)
     # 上面図 (XZ平面)
     ax1.plot(df['x'], df['z'], linestyle='-', color='red', alpha=0.9, lw=1.5, label=label)
     ax1.plot(df['x'].iloc[0], df['z'].iloc[0], 'go', markersize=8)
