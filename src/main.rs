@@ -1,87 +1,13 @@
-use csv::Writer;
-use glam::{Mat4, Vec3}; // 外部クレートのインポート
-use rand::Rng;
 use std::error::Error; // 標準ライブラリのインポート
-mod primitives;
+
+use config::model::SceneConfig;
+use csv::Writer;
+use glam::Vec3; // 外部クレートのインポート
 use primitives::*;
-use serde::Deserialize;
+use rand::Rng;
 
-#[derive(Deserialize)]
-struct SimulationSettingsConfig {
-    infinity_distance: f32,
-    max_bounces: u32,
-}
-
-#[derive(Deserialize)]
-struct SceneConfig {
-    simulation_settings: SimulationSettingsConfig,
-    rays: Vec<RayConfig>,
-    objects: Vec<ObjectConfig>,
-}
-
-#[derive(Deserialize)]
-struct ObjectConfig {
-    shape: ShapeConfig,
-    material: MaterialConfig,
-    transform: TransformConfig,
-}
-
-#[derive(Deserialize)]
-#[serde(tag = "type")]
-enum ShapeConfig {
-    Sphere {
-        radius: f32,
-    },
-    Box {
-        size: [f32; 3],
-    },
-    Plane {
-        normal: [f32; 3],
-    },
-    Cylinder {
-        height: f32,
-        radius: f32,
-    },
-    Cone {
-        angle_deg: f32,
-        height: f32,
-    }, // 有限円錐の定義を追加
-    Wedge {
-        size: [f32; 3],
-        angle_deg: f32,
-    },
-    Lens {
-        thickness: f32,
-        diameter: f32,
-        r1: f32,
-        r2: f32,
-    },
-}
-
-#[derive(Deserialize, Clone, Copy)] // 材質はコピーするのでClone, Copyも
-#[serde(tag = "type")]
-enum MaterialConfig {
-    Glass { ior: f32 },
-    HalfMirror { reflectance: f32 },
-    Mirror,
-}
-
-#[derive(Deserialize, Clone, Copy)]
-struct GlassConfig {
-    ior: f32,
-}
-
-#[derive(Deserialize)]
-struct TransformConfig {
-    position: [f32; 3],
-    rotation_y_deg: f32,
-}
-
-#[derive(Deserialize)]
-struct RayConfig {
-    origin: [f32; 3],
-    direction: [f32; 3],
-}
+mod config;
+mod primitives;
 
 // 光線を表す構造体
 // origin: 始点, direction: 方向
@@ -145,116 +71,19 @@ pub enum CsgOperation {
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("設定ファイル scene.toml を読み込んでいます...");
-    let toml_str = std::fs::read_to_string("scene.toml")?;
-    let scene_config: SceneConfig = toml::from_str(&toml_str)?;
-
-    let mut scene: Vec<Box<dyn Hittable>> = Vec::new();
+    let scene_config = SceneConfig::load_from_path("scene.toml")?;
 
     // --- 読み込んだ設定から動的にオブジェクトを構築 ---
-    for object_config in scene_config.objects {
-        let material = match object_config.material {
-            MaterialConfig::Mirror {} => Material::Mirror,
-            MaterialConfig::Glass { ior } => Material::Glass { ior },
-            MaterialConfig::HalfMirror { reflectance } => Material::HalfMirror { reflectance },
-        };
-
-        let primitive: Box<dyn Hittable> = match object_config.shape {
-            ShapeConfig::Sphere { radius } => Box::new(Sphere {
-                center: Vec3::ZERO,
-                radius,
-                material,
-            }),
-            ShapeConfig::Box { size } => {
-                let s = Vec3::from_array(size) / 2.0;
-                Box::new(AxisAlignedBox {
-                    min: -s,
-                    max: s,
-                    material,
-                })
-            }
-            ShapeConfig::Plane { normal } => Box::new(Plane {
-                point: Vec3::ZERO,
-                normal: Vec3::from_array(normal),
-                material,
-            }),
-            ShapeConfig::Cylinder { height, radius } => {
-                let half_height = height / 2.0;
-                let body = Box::new(InfiniteCylinder {
-                    axis_point: Vec3::ZERO,
-                    axis_dir: Vec3::Y,
-                    radius,
-                    material,
-                });
-                let cap_top = Box::new(Plane {
-                    point: Vec3::new(0.0, half_height, 0.0),
-                    normal: Vec3::NEG_Y,
-                    material,
-                });
-                let cap_bottom = Box::new(Plane {
-                    point: Vec3::new(0.0, -half_height, 0.0),
-                    normal: Vec3::Y,
-                    material,
-                });
-                let capped_cylinder = Box::new(CSGObject {
-                    left: body,
-                    right: cap_top,
-                    operation: CsgOperation::Intersection,
-                });
-                Box::new(CSGObject {
-                    left: capped_cylinder,
-                    right: cap_bottom,
-                    operation: CsgOperation::Intersection,
-                })
-            }
-            ShapeConfig::Cone { angle_deg, height } => {
-                let cone = Box::new(InfiniteCone::new(
-                    Vec3::ZERO,
-                    Vec3::Y,
-                    angle_deg.to_radians(),
-                    material,
-                ));
-                let cap = Box::new(Plane {
-                    point: Vec3::new(0.0, height, 0.0),
-                    normal: Vec3::NEG_Y,
-                    material,
-                });
-                Box::new(CSGObject {
-                    left: cone,
-                    right: cap,
-                    operation: CsgOperation::Intersection,
-                })
-            }
-            ShapeConfig::Wedge { size, angle_deg } => Box::new(Wedge::new(
-                Vec3::from_array(size),
-                angle_deg.to_radians(),
-                material,
-            )),
-            ShapeConfig::Lens {
-                thickness,
-                diameter,
-                r1,
-                r2,
-            } => Box::new(Lens::new(thickness, diameter, r1, r2, material)),
-        };
-
-        // Transformを適用
-        let transform_config = object_config.transform;
-        let translation = Mat4::from_translation(Vec3::from_array(transform_config.position));
-        let rotation = Mat4::from_rotation_y(transform_config.rotation_y_deg.to_radians());
-        let transform_matrix = translation * rotation;
-
-        scene.push(Box::new(Transform::new(primitive, transform_matrix)));
-    }
+    let objects: Vec<Box<dyn Hittable>> =
+        scene_config.objects.into_iter().map(Into::into).collect();
 
     // --- 3. 初期光線の設定
-    for (i, ray_config) in scene_config.rays.iter().enumerate() {
-        // --- 3a. 初期光線の設定 ---
-        let mut ray = Ray {
-            origin: Vec3::from_array(ray_config.origin),
-            direction: Vec3::from_array(ray_config.direction).normalize(),
-            current_ior: 1.0,
-        };
-
+    for (i, mut ray) in scene_config
+        .rays
+        .into_iter()
+        .map(Into::<Ray>::into)
+        .enumerate()
+    {
         // --- 3b. 光路の追跡 ---
         let mut path_points: Vec<Vec3> = vec![ray.origin];
         let settings = &scene_config.simulation_settings;
@@ -265,7 +94,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             let mut closest_hit_record: Option<HitRecord> = None;
             let mut t_closest = f32::INFINITY;
 
-            for object in &scene {
+            for object in &objects {
                 if let Some(hits) = object.intersect_all(&ray, 0.001, t_closest) {
                     print!("{:?}", hits);
                     if let Some(first_hit) = hits.first() {
