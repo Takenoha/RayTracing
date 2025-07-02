@@ -22,3 +22,27 @@ pub use plane::Plane;
 pub use sphere::Sphere;
 pub use transform::Transform;
 pub use wedge::Wedge;
+
+use crate::HitRecord;
+use crate::Ray;
+// ブーリアン演算の種類
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum CsgOperation {
+    /// 和集合
+    Union,
+    /// 積集合
+    Intersection,
+    /// 差集合
+    Difference,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Material {
+    Mirror,
+    Glass { ior: f32 },
+    HalfMirror { reflectance: f32 },
+}
+
+pub trait Hittable {
+    fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>>;
+}

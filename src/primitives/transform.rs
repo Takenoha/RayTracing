@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Material, Ray};
+use crate::{HitRecord, Hittable, Ray};
 use glam::Mat4;
 // 他のHittableオブジェクトに変換を適用するためのラッパー
 pub struct Transform {

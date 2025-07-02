@@ -1,5 +1,6 @@
-use crate::{CSGObject, CsgOperation, HitRecord, Hittable, Material, Plane, Ray};
 use glam::Vec3;
+
+use crate::{CSGObject, CsgOperation, HitRecord, Hittable, Material, Plane, Ray};
 //ウェッジ
 pub struct Wedge {
     pub csg_object: Box<dyn Hittable>,

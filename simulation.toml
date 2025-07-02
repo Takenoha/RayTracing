@@ -1,9 +1,14 @@
-[settings]
+[simulation_settings]
 infinity_distance = 50.0 # レイが何にも衝突しなかった場合に、この距離だけ進んで描画を終える
 max_bounces = 10          # 最大の衝突回数
 
 [[scene.rays]]
 origin = [-10.0, 2.0, -2.0]
+direction = [1.0, 0.0, 0.0]
+current_ior = 1.0
+
+[[scene.rays]]
+origin = [-10.0, 1.0, -2.0]
 direction = [1.0, 0.0, 0.0]
 current_ior = 1.0
 
