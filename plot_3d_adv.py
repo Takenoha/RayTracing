@@ -28,13 +28,13 @@ def get_rotated_rect_corners(center, size, angle_deg):
 
 # --- 1. ファイル読み込み ---
 try:
-    with open('scene.toml', 'r', encoding='utf-8') as f:
+    with open('simulation.toml', 'r', encoding='utf-8') as f:
         scene_config = toml.load(f)
 except FileNotFoundError:
-    print("エラー: 'scene.toml' が見つかりません。")
+    print("エラー: 'simulation.toml' が見つかりません。")
     exit()
 
-path_files = sorted(glob.glob('path_*.csv'))
+path_files = sorted(glob.glob('./dist/path_*.csv'))
 if not path_files:
     print("エラー: path_*.csv が見つかりません。先にRustプログラムを実行してください。")
     exit()

@@ -38,6 +38,19 @@ pub enum ShapeConfig {
         r1: f32,
         r2: f32,
     },
+    // CSG（Constructive Solid Geometry）オブジェクトの定義
+    Union {
+        a: Box<ShapeConfig>,
+        b: Box<ShapeConfig>,
+    },
+    Intersection {
+        a: Box<ShapeConfig>,
+        b: Box<ShapeConfig>,
+    },
+    Difference {
+        a: Box<ShapeConfig>,
+        b: Box<ShapeConfig>,
+    },
 }
 
 impl ShapeConfig {
@@ -119,6 +132,21 @@ impl ShapeConfig {
                 r1,
                 r2,
             } => Box::new(Lens::new(thickness, diameter, r1, r2, material)),
+            ShapeConfig::Union { a, b } => Box::new(CSGObject {
+                left: a.into_with(material.clone()),
+                right: b.into_with(material),
+                operation: CsgOperation::Union,
+            }),
+            ShapeConfig::Intersection { a, b } => Box::new(CSGObject {
+                left: a.into_with(material.clone()),
+                right: b.into_with(material),
+                operation: CsgOperation::Intersection,
+            }),
+            ShapeConfig::Difference { a, b } => Box::new(CSGObject {
+                left: a.into_with(material.clone()),
+                right: b.into_with(material),
+                operation: CsgOperation::Difference,
+            }),
         }
     }
 }

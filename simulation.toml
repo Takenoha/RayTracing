@@ -3,23 +3,35 @@ infinity_distance = 50.0 # レイが何にも衝突しなかった場合に、�
 max_bounces = 10          # 最大の衝突回数
 
 [[scene.rays]]
-origin = [-10.0, 2.0, -2.0]
-direction = [1.0, 0.0, 0.0]
+origin = [-10.0, 0.0, -2.0]
+direction = [1.0, 0.2, 0.0]
 current_ior = 1.0
 
 [[scene.rays]]
 origin = [-10.0, 1.0, -2.0]
-direction = [1.0, 0.0, 0.0]
+direction = [1.0, -0.2, 0.0]
 current_ior = 1.0
 
+
 [[scene.objects]]
-# 球 (Sphere)
-shape = { type = "Sphere", radius = 5.0 }
-material = { type = "Glass", ior = 1.5 }
+# CSG (差演算) の定義例
+# 立方体 (Cube) から 円筒 (Cylinder) を引くことで、穴の開いたブロックを作成する
+
+shape.type = "Difference" # 演算の種類を指定
+  
+  # a: 元になる図形
+shape.a = { type = "Box", size = [5.0, 5.0, 5.0] }
+  
+  # b:くり抜く図形
+  # 高さを立方体のサイズより少し大きくして、完全に貫通させる
+shape.b = { type = "Cylinder", radius = 1.5, height = 6.0 }
+
+
+material = { type = "Glass", ior =1.5 } 
 transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
 
 [[scene.objects]]
 # 球 (Sphere)
 shape = { type = "Sphere", radius = 5.0 }
 material = { type = "Glass", ior = 1.5 }
-transform = { position = [15.0, 2.5, 2.5], rotation_y_deg = 0.0 }
+transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
