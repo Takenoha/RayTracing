@@ -1,9 +1,10 @@
 use glam::{Mat4, Vec3};
+use raytracing_core::{Hittable, Material, Transform};
 use serde::Deserialize;
 
-use crate::{primitives::Transform, Hittable, Material};
-
-use super::{MaterialConfig, ShapeConfig, TransformConfig};
+use crate::{
+    material_config::MaterialConfig, shape_config::ShapeConfig, transform_config::TransformConfig,
+};
 
 #[derive(Deserialize, Clone)]
 pub struct ObjectConfig {

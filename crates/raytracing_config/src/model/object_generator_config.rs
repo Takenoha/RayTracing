@@ -1,16 +1,10 @@
 use glam::Vec3;
+use raytracing_core::{Hittable, Ray};
 use serde::Deserialize;
 
-use crate::model::MaterialConfig;
-use crate::model::ObjectConfig;
-use crate::model::SceneConfig;
-use crate::model::ShapeConfig;
-use crate::model::SimulationConfig;
-use crate::model::SimulationSettingsConfig;
-use crate::Hittable;
-use crate::Ray;
-use crate::Scene;
-use crate::Transform;
+use crate::{
+    material_config::MaterialConfig, object_config::ObjectConfig, shape_config::ShapeConfig,
+};
 
 // --- ジェネレータの定義 ---
 

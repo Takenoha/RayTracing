@@ -3,7 +3,7 @@ use std::clone;
 use glam::Vec3;
 use rand::Rng;
 
-use crate::{model::SimulationSettingsConfig, Hittable, Material};
+use crate::{Hittable, Material};
 
 // 反射ベクトルを計算
 fn reflect(incident: Vec3, normal: Vec3) -> Vec3 {
@@ -28,6 +28,11 @@ fn refract(incident: Vec3, normal: Vec3, ior_ratio: f32) -> Option<Vec3> {
 pub struct Scene {
     pub objects: Vec<Box<dyn Hittable>>,
     pub rays: Vec<Ray>,
+}
+
+pub struct SimulationSettingsConfig {
+    pub infinity_distance: f32,
+    pub max_bounces: u32,
 }
 
 impl Scene {
@@ -80,7 +85,7 @@ impl Scene {
                         }
                         Material::HalfMirror { reflectance } => {
                             // 0.0から1.0までの一様な乱数を生成
-                            if rand::thread_rng().gen::<f32>() < reflectance {
+                            if rand::thread_rng().r#gen::<f32>() < reflectance {
                                 // 反射する場合
                                 ray.direction = reflect(ray.direction, hit.normal);
                             } else {

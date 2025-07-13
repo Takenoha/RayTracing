@@ -2,7 +2,7 @@ use std::{error::Error, path::Path};
 
 use serde::Deserialize;
 
-use super::{SceneConfig, SimulationSettingsConfig};
+use crate::{scene_config::SceneConfig, simulation_settings_config::SimulationSettingsConfig};
 
 #[derive(Deserialize)]
 pub struct SimulationConfig {

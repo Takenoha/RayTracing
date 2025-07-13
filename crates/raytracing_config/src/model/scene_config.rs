@@ -1,13 +1,13 @@
 use std::{error::Error, path::Path};
 
+use raytracing_core::{Hittable, Ray, Scene};
 use serde::Deserialize;
 
 use crate::{
     model::object_generator_config::{ObjectGeneratorConfig, RayGeneratorConfig},
-    Hittable, Ray, Scene,
+    object_config::ObjectConfig,
+    ray_config::RayConfig,
 };
-
-use super::{ObjectConfig, RayConfig, SimulationSettingsConfig};
 
 #[derive(Deserialize)]
 pub struct SceneConfig {

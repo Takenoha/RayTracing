@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::Material;
+use raytracing_core::Material;
 
 #[derive(Deserialize, Clone, Copy)] // 材質はコピーするのでClone, Copyも
 #[serde(tag = "type")]

@@ -1,7 +1,7 @@
 use glam::Vec3;
 use serde::Deserialize;
 
-use crate::Ray;
+use raytracing_core::Ray;
 
 #[derive(Deserialize)]
 pub struct RayConfig {

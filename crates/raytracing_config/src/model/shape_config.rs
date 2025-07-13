@@ -1,12 +1,9 @@
 use glam::Vec3;
-use serde::Deserialize;
-
-use crate::{
-    primitives::{
-        AxisAlignedBox, CSGObject, InfiniteCone, InfiniteCylinder, Lens, Plane, Sphere, Wedge,
-    },
-    CsgOperation, Hittable, Material,
+use raytracing_core::{
+    AxisAlignedBox, CSGObject, CsgOperation, Hittable, InfiniteCone, InfiniteCylinder, Lens,
+    Material, Plane, Sphere, Wedge,
 };
+use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
 #[serde(tag = "type")]
