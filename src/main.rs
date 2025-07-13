@@ -10,8 +10,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     } = SimulationConfig::load_from_path("simulation.toml")?;
 
     let scene: Scene = scene.into();
-    let results = scene.simulate_rays(simulation_settings);
 
+    let results = scene.simulate_rays(simulation_settings);
+    println!("{:?}", results);
     // --- 3c. 結果を光路ごとに別々のCSVファイルに出力 ---
     for (i, result) in results.into_iter().enumerate() {
         let file_name = format!("./dist/path_{}.csv", i);

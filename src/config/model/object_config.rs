@@ -5,7 +5,7 @@ use crate::{primitives::Transform, Hittable, Material};
 
 use super::{MaterialConfig, ShapeConfig, TransformConfig};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct ObjectConfig {
     pub shape: ShapeConfig,
     pub material: MaterialConfig,

@@ -25,7 +25,6 @@ fn refract(incident: Vec3, normal: Vec3, ior_ratio: f32) -> Option<Vec3> {
 
     Some((perp + parallel).normalize())
 }
-
 pub struct Scene {
     pub objects: Vec<Box<dyn Hittable>>,
     pub rays: Vec<Ray>,

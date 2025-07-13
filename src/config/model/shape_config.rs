@@ -8,7 +8,7 @@ use crate::{
     CsgOperation, Hittable, Material,
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum ShapeConfig {
     Sphere {

@@ -1,37 +1,61 @@
 [simulation_settings]
-infinity_distance = 50.0 # レイが何にも衝突しなかった場合に、この距離だけ進んで描画を終える
-max_bounces = 10          # 最大の衝突回数
+infinity_distance = 50.0
+max_bounces = 10
 
-[[scene.rays]]
-origin = [-10.0, 0.0, -2.0]
-direction = [1.0, 0.2, 0.0]
+# === レイ生成ルール ===
+
+# 1. グリッド状の平行光
+[scene]
+[[scene.ray_generators]]
+type = "ParallelGrid"
+origin_corner = [-10.0, -5.0, -5.0] # グリッドの開始角
+vec_u = [0.0, 10.0, 0.0]           # U方向のベクトル(グリッドの幅)
+vec_v = [0.0, 0.0, 10.0]           # V方向のベクトル(グリッドの高さ)
+count_u = 20                       # U方向のレイの数
+count_v = 20                       # V方向のレイの数
+direction = [1.0, 0.0, 0.0]        # 全てのレイが向かう方向
 current_ior = 1.0
 
-[[scene.rays]]
-origin = [-10.0, 1.0, -2.0]
-direction = [1.0, -0.2, 0.0]
+# 2. プロジェクターのような点光源
+[[scene.ray_generators]]
+type = "Projector"
+origin = [-15.0, 0.0, 0.0]         # 光源の単一の始点
+target_corner = [-5.0, -5.0, -5.0] # 投影面の開始角
+target_u = [0.0, 10.0, 0.0]        # 投影面のU方向ベクトル
+target_v = [0.0, 0.0, 10.0]        # 投影面のV方向ベクトル
+count_u = 50                       # U方向のレイの数
+count_v = 50                       # V方向のレイの数
 current_ior = 1.0
 
+# === オブジェクト生成ルール ===
+
+# 3. オブジェクトのグリッド配置
+[[scene.object_generators]]
+type = "ObjectGrid"
+count_x = 5
+count_z = 5
+position_start = [-10.0, -10.0, 10.0] # グリッドの開始位置
+step_x = [5.0, 0.0, 0.0]             # X方向の配置ステップ
+step_z = [0.0, 0.0, -5.0]            # Z方向の配置ステップ
+
+# グリッド配置するオブジェクトのテンプレート
+template.shape = { type = "Sphere", radius = 1.5 }
+template.material = { type = "Glass", ior = 1.5 }
+template.transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
+# === 個別に配置するオブジェクト ===
+[[scene.objects]]
+# 床
+shape = { type = "Plane", normal = [0.0, 1.0, 0.0] }
+material = { type = "Glass", ior = 1.2}
+transform = { position = [0.0, -10.0, 0.0], rotation_y_deg = 0.0 }
+
+
+# 個別レイ（必要なら追加）
+[[scene.rays]]
+origin = [0.0, 0.0, 0.0]
+direction = [1.0, 0.0, 0.0]
 
 [[scene.objects]]
-# CSG (差演算) の定義例
-# 立方体 (Cube) から 円筒 (Cylinder) を引くことで、穴の開いたブロックを作成する
-
-shape.type = "Difference" # 演算の種類を指定
-  
-  # a: 元になる図形
-shape.a = { type = "Box", size = [5.0, 5.0, 5.0] }
-  
-  # b:くり抜く図形
-  # 高さを立方体のサイズより少し大きくして、完全に貫通させる
-shape.b = { type = "Cylinder", radius = 1.5, height = 6.0 }
-
-
-material = { type = "Glass", ior =1.5 } 
-transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
-
-[[scene.objects]]
-# 球 (Sphere)
-shape = { type = "Sphere", radius = 5.0 }
-material = { type = "Glass", ior = 1.5 }
-transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
+shape = { type = "Plane", normal = [0.0, 1.0, 0.0] }
+material = { type = "Glass", ior = 1.2 }
+transform = { position = [0.0, -10.0, 0.0],rotation_y_deg = 0.0 }
