@@ -43,6 +43,6 @@ pub enum Material {
     HalfMirror { reflectance: f32 },
 }
 
-pub trait Hittable {
+pub trait Hittable: Sync + Send {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>>;
 }

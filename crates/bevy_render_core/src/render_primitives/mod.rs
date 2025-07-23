@@ -12,14 +12,14 @@ mod render_sphere;
 mod render_wedge;
 
 // 各モジュール内の公開アイテムを、primitives::* で使えるように再公開（re-export）する
-pub use render_axis_aligned_box::AxisAlignedBox;
-pub use render_csg::CSGObject;
-pub use render_infinite_cone::InfiniteCone;
-pub use render_infinite_cylinder::InfiniteCylinder;
-pub use render_lens::Lens;
-pub use render_plane::Plane;
-pub use render_sphere::Sphere;
-pub use render_wedge::Wedge;
+//pub use render_axis_aligned_box::AxisAlignedBox;
+//pub use render_csg::CSGObject;
+//pub use render_infinite_cone::InfiniteCone;
+//pub use render_infinite_cylinder::InfiniteCylinder;
+//pub use render_lens::Lens;
+//pub use render_plane::Plane;
+//pub use render_sphere::Sphere;
+//pub use render_wedge::Wedge;
 
 use raytracing_core::HitRecord;
 use raytracing_core::Ray;

@@ -1,8 +1,8 @@
-use std::error::Error;
-
+use bevy_render_cli::render_cli;
 use csv::Writer;
 use raytracing_config::simulation_config::SimulationConfig;
 use raytracing_core::Scene;
+use std::error::Error;
 
 pub fn cli() -> Result<(), Box<dyn Error>> {
     println!("設定ファイル simulation.toml を読み込んでいます...");
@@ -12,7 +12,7 @@ pub fn cli() -> Result<(), Box<dyn Error>> {
     } = SimulationConfig::load_from_path("simulation.toml")?;
     let scene: Scene = scene.into();
     let results = scene.simulate_rays(simulation_settings.into());
-
+    render_cli(scene, results.clone());
     // --- 3c. 結果を光路ごとに別々のCSVファイルに出力 ---
     for (i, result) in results.into_iter().enumerate() {
         let file_name = format!("./dist/path_{}.csv", i);
