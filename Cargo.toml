@@ -12,6 +12,9 @@ resolver = "2"
 raytracing_core = { path = "./crates/raytracing_core" }
 raytracing_config = { path = "./crates/raytracing_config" }
 raytracing_cli = { path = "./crates/raytracing_cli" }
+bevy_render_cli = {path = "./crates/bevy_render_cli"}
+bevy_render_core = {path = "./crates/bevy_render_core"}
+bevy_render_config = {path = "./crates/bevy_render_config"}
 
 [dependencies]
 raytracing_cli.workspace = true
