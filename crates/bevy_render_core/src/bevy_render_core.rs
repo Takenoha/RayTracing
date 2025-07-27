@@ -1,4 +1,7 @@
-use bevy::{core_pipeline::oit::OrderIndependentTransparencySettings, prelude::*};
+use bevy::pbr::{DirectionalLight, StandardMaterial};
+use bevy::prelude::*;
+use bevy_flycam::prelude::*;
+use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 use rand::{self, Rng};
 use raytracing_core::Scene; // Import Shape from raytracing_core
 #[derive(Resource)]
@@ -17,6 +20,8 @@ pub fn render_core(
 fn render_main(scene: Scene, results: Vec<Vec<Vec3>>) {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(PanOrbitCameraPlugin)
+        .add_plugins(PlayerPlugin)
         .insert_resource(RenderScene(scene))
         .insert_resource(PathData(results))
         .add_systems(Startup, setup)
@@ -34,8 +39,11 @@ fn setup(
     let results = &path_data.0;
     // 光の軌跡の描画
     spawn_arrows(&mut commands, &mut meshes, &mut materials, results);
-
-    commands.spawn((Camera3d::default(),));
+    commands.spawn(DirectionalLight {
+        shadows_enabled: true,
+        ..default()
+    });
+    //commands.spawn((Camera3d::default(),));
 }
 
 fn spawn_object() {}
@@ -75,18 +83,17 @@ fn spawn_arrow(
     end: Vec3,
 ) {
     let direction = end - start;
-    let length = direction.length();
-    if length < 0.001 {
+    let half_length = direction.length() / 2.0;
+    if half_length < 0.001 {
         return;
     }
 
-    let mid_point = start + direction / 2.0;
     let mid_point = start + direction / 2.0;
     let rotation = Quat::from_rotation_arc(Vec3::Y, direction.normalize());
     commands.spawn((
         Mesh3d(meshes.add(Cylinder {
             radius: 0.02,
-            half_height: length,
+            half_height: half_length,
         })),
         MeshMaterial3d(material.clone()),
         Transform {

@@ -29,3 +29,30 @@ transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
 shape = { type = "Plane", normal = [0.0, 1.0, 0.0] }
 material = { type = "Mirror" }
 transform = { position = [0.0, -10.0, 0.0], rotation_y_deg = 0.0 }
+
+# 1. グリッド状の平行光
+[[scene.ray_generators]]
+type = "ParallelGrid"
+origin_corner = [-10.0, -5.0, -5.0] # グリッドの開始角
+vec_u = [0.0, 10.0, 0.0]           # U方向のベクトル(グリッドの幅)
+vec_v = [0.0, 0.0, 10.0]           # V方向のベクトル(グリッドの高さ)
+count_u = 2                       # U方向のレイの数
+count_v = 2                       # V方向のレイの数
+direction = [1.0, 0.0, 0.0]        # 全てのレイが向かう方向
+current_ior = 1.0
+
+# 2. プロジェクターのような点光源
+[[scene.ray_generators]]
+type = "Projector"
+origin = [-15.0, 0.0, 0.0]         # 光源の単一の始点
+target_corner = [-5.0, -5.0, -5.0] # 投影面の開始角
+target_u = [0.0, 10.0, 0.0]        # 投影面のU方向ベクトル
+target_v = [0.0, 0.0, 10.0]        # 投影面のV方向ベクトル
+count_u = 3                      # U方向のレイの数
+count_v = 1                       # V方向のレイの数
+current_ior = 1.0
+
+# 個別レイ（必要なら追加）
+[[scene.rays]]
+origin = [0.0, 0.0, 0.0]
+direction = [1.0, 0.0, 0.0]
