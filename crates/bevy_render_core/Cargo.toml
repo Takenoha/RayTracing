@@ -14,3 +14,4 @@ toml = "0.8"
 raytracing_core.workspace = true
 bevy_panorbit_camera = "0.27"
 bevy_flycam = "0.16.1"
+csgrs = { version = "0.20.1", features = ["bevymesh"] }
