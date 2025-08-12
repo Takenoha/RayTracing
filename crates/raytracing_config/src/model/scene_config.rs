@@ -1,5 +1,3 @@
-use std::{error::Error, path::Path};
-
 use raytracing_core::{Hittable, Ray, Scene};
 use serde::Deserialize;
 
