@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Ray};
+use crate::{HitRecord, Hittable, Ray, ShapeType};
 use glam::Mat4;
 // 他のHittableオブジェクトに変換を適用するためのラッパー
 pub struct Transform {
@@ -48,5 +48,9 @@ impl Hittable for Transform {
         } else {
             None
         }
+    }
+
+    fn shape(&self) -> ShapeType {
+        ShapeType::Transform
     }
 }

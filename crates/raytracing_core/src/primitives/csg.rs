@@ -1,4 +1,4 @@
-use crate::{CsgOperation, HitRecord, Hittable, Ray};
+use crate::{CsgOperation, HitRecord, Hittable, Ray, ShapeType};
 // CSGオブジェクト
 pub struct CSGObject {
     pub left: Box<dyn Hittable>,
@@ -72,5 +72,9 @@ impl Hittable for CSGObject {
         } else {
             Some(result_hits)
         }
+    }
+
+    fn shape(&self) -> ShapeType {
+        ShapeType::CSGObject
     }
 }

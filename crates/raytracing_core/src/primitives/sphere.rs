@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Material, Ray};
+use crate::{HitRecord, Hittable, Material, Ray, ShapeType};
 use glam::Vec3; // main.rsから移動させる共通定義をインポート
 
 #[derive(Debug, Clone, Copy)]
@@ -71,5 +71,9 @@ impl Hittable for Sphere {
         } else {
             Some(hits)
         }
+    }
+
+    fn shape(&self) -> ShapeType {
+        ShapeType::Sphere
     }
 }

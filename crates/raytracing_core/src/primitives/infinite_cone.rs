@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Material, Ray};
+use crate::{HitRecord, Hittable, Material, Ray, ShapeType};
 use glam::Vec3;
 // 無限円錐
 #[derive(Debug, Clone, Copy)]
@@ -83,5 +83,9 @@ impl Hittable for InfiniteCone {
         } else {
             Some(hits)
         }
+    }
+
+    fn shape(&self) -> ShapeType {
+        ShapeType::InfiniteCone
     }
 }

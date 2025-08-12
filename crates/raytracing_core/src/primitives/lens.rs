@@ -1,5 +1,6 @@
 use crate::{
-    CSGObject, CsgOperation, HitRecord, Hittable, InfiniteCylinder, Material, Plane, Ray, Sphere,
+    CSGObject, CsgOperation, HitRecord, Hittable, InfiniteCylinder, Material, Plane, Ray,
+    ShapeType, Sphere,
 };
 use glam::{f32, Vec3};
 //レンズプリミティブ
@@ -79,5 +80,9 @@ impl Lens {
 impl Hittable for Lens {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
         self.csg_object.intersect_all(ray, t_min, t_max)
+    }
+
+    fn shape(&self) -> ShapeType {
+        ShapeType::Lens
     }
 }

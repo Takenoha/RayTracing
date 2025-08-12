@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Material, Ray};
+use crate::{HitRecord, Hittable, Material, Ray, ShapeType};
 use glam::Vec3; // main.rsから移動させる共通定義をインポート
 
 #[derive(Debug, Clone, Copy)]
@@ -51,5 +51,9 @@ impl Hittable for Plane {
         // ★★★ 変更点 ★★★
         // 単一のHitRecordを、要素が1つのVec（ベクタ）に入れてSomeで返す
         Some(vec![hit_record])
+    }
+
+    fn shape(&self) -> ShapeType {
+        ShapeType::Plane
     }
 }

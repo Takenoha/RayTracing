@@ -43,6 +43,20 @@ pub enum Material {
     HalfMirror { reflectance: f32 },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ShapeType {
+    AxisAlignedBox,
+    CSGObject,
+    InfiniteCone,
+    InfiniteCylinder,
+    Lens,
+    Plane,
+    Sphere,
+    Transform,
+    Wedge,
+}
+
 pub trait Hittable: Sync + Send {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>>;
+    fn shape(&self) -> ShapeType;
 }

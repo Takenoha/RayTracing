@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Material, Ray};
+use crate::{HitRecord, Hittable, Material, Ray, ShapeType};
 use glam::Vec3;
 // 無限円柱
 #[derive(Debug, Clone, Copy)]
@@ -81,5 +81,9 @@ impl Hittable for InfiniteCylinder {
         } else {
             Some(hits)
         }
+    }
+
+    fn shape(&self) -> ShapeType {
+        ShapeType::InfiniteCylinder
     }
 }

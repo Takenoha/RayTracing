@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Material, Ray};
+use crate::{HitRecord, Hittable, Material, Ray, ShapeType};
 use glam::Vec3;
 // 軸並行な直方体 (AABB) 対角の座標を指定
 #[derive(Debug, Clone, Copy)]
@@ -61,6 +61,10 @@ impl Hittable for AxisAlignedBox {
         });
 
         Some(hits)
+    }
+
+    fn shape(&self) -> ShapeType {
+        ShapeType::AxisAlignedBox
     }
 }
 
