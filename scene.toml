@@ -1,20 +1,32 @@
 [simulation_settings]
-infinity_distance = 50.0 # レイが何にも衝突しなかった場合に、この距離だけ進んで描画を終える
-max_bounces = 10          # 最大の衝突回数
+infinity_distance = 50.0
+max_bounces = 10
 
 [[rays]]
-origin = [-10.0, 2.0, -2.0]
+origin = [-15.0, 2.0, 0.0]
 direction = [1.0, 0.0, 0.0]
 current_ior = 1.0
 
 [[objects]]
-# 球 (Sphere)
-shape = { type = "Sphere", radius = 5.0 }
+# Sphere
+shape = { type = "Sphere", radius = 2.0 }
 material = { type = "Glass", ior = 1.5 }
-transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
+transform = { position = [0.0, 0.0, 0.0] }
 
 [[objects]]
-# 球 (Sphere)
-shape = { type = "Sphere", radius = 5.0 }
+# Box
+shape = { type = "Box", size = [3.0, 3.0, 3.0] }
+material = { type = "Mirror" }
+transform = { position = [0.0, 0.0, -8.0] }
+
+[[objects]]
+# Wedge
+shape = { type = "Wedge", size = [4.0, 3.0, 2.0], angle_deg = 30.0 }
 material = { type = "Glass", ior = 1.5 }
-transform = { position = [15.0, 2.5, 2.5], rotation_y_deg = 0.0 }
+transform = { position = [0.0, 0.0, 8.0] }
+
+[[objects]]
+# Lens
+shape = { type = "Lens", thickness = 1.0, diameter = 4.0, r1 = 5.0, r2 = -5.0 }
+material = { type = "Glass", ior = 1.5 }
+transform = { position = [8.0, 0.0, 0.0] }
