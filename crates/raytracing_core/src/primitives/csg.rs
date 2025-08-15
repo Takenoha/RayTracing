@@ -4,6 +4,7 @@ pub struct CSGObject {
     pub left: Box<dyn Hittable>,
     pub right: Box<dyn Hittable>,
     pub operation: CsgOperation,
+    pub renderable_shape_override: Option<RenderableShape>,
 }
 impl Hittable for CSGObject {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
@@ -75,8 +76,9 @@ impl Hittable for CSGObject {
     }
 
     fn get_renderable_shape(&self) -> Option<RenderableShape> {
-        // For now, we don't render CSG objects directly.
-        // In the future, we could traverse the tree and return a list of shapes.
+        if self.renderable_shape_override.is_some() {
+            return self.renderable_shape_override.clone();
+        }
         None
     }
 

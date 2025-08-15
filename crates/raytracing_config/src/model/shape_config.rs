@@ -1,7 +1,7 @@
 use glam::Vec3;
 use raytracing_core::{
     AxisAlignedBox, CSGObject, CsgOperation, Hittable, InfiniteCone, InfiniteCylinder, Lens,
-    Material, Plane, Sphere, Wedge,
+    Material, Plane, RenderableShape, Sphere, Wedge,
 };
 use serde::Deserialize;
 
@@ -93,11 +93,13 @@ impl ShapeConfig {
                     left: body,
                     right: cap_top,
                     operation: CsgOperation::Intersection,
+                    renderable_shape_override: None,
                 });
                 Box::new(CSGObject {
                     left: capped_cylinder,
                     right: cap_bottom,
                     operation: CsgOperation::Intersection,
+                    renderable_shape_override: Some(RenderableShape::Cylinder { height, radius }),
                 })
             }
             ShapeConfig::Cone { angle_deg, height } => {
@@ -116,6 +118,7 @@ impl ShapeConfig {
                     left: cone,
                     right: cap,
                     operation: CsgOperation::Intersection,
+                    renderable_shape_override: Some(RenderableShape::Cone { height, angle_deg }),
                 })
             }
             ShapeConfig::Wedge { size, angle_deg } => Box::new(Wedge::new(
@@ -133,16 +136,19 @@ impl ShapeConfig {
                 left: a.into_with(material.clone()),
                 right: b.into_with(material),
                 operation: CsgOperation::Union,
+                renderable_shape_override: None,
             }),
             ShapeConfig::Intersection { a, b } => Box::new(CSGObject {
                 left: a.into_with(material.clone()),
                 right: b.into_with(material),
                 operation: CsgOperation::Intersection,
+                renderable_shape_override: None,
             }),
             ShapeConfig::Difference { a, b } => Box::new(CSGObject {
                 left: a.into_with(material.clone()),
                 right: b.into_with(material),
                 operation: CsgOperation::Difference,
+                renderable_shape_override: None,
             }),
         }
     }

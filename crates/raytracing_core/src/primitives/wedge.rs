@@ -57,21 +57,25 @@ impl Wedge {
             left: p1,
             right: p2,
             operation: CsgOperation::Intersection,
+            renderable_shape_override: None,
         });
         let csg2 = Box::new(CSGObject {
             left: csg1,
             right: p3,
             operation: CsgOperation::Intersection,
+            renderable_shape_override: None,
         });
         let csg3 = Box::new(CSGObject {
             left: csg2,
             right: p4,
             operation: CsgOperation::Intersection,
+            renderable_shape_override: None,
         });
         let final_wedge = Box::new(CSGObject {
             left: csg3,
             right: p5,
             operation: CsgOperation::Intersection,
+            renderable_shape_override: None,
         });
 
         Wedge {

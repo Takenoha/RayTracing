@@ -70,7 +70,22 @@ fn spawn_scene_objects(
                 RenderableShape::Plane { normal } => {
                     meshes.add(Plane3d::new(normal.into(), Vec2::splat(1000.0)))
                 }
-                _ => continue,
+                RenderableShape::Cylinder { height, radius } => {
+                    meshes.add(Cylinder {
+                        half_height: height / 2.0,
+                        radius,
+                        ..default()
+                    })
+                }
+                RenderableShape::Cone { height, angle_deg } => {
+                    let radius = height * angle_deg.to_radians().tan();
+                    meshes.add(Cone {
+                        height,
+                        radius,
+                        ..default()
+                    })
+                }
+                _ => continue, // Ignore Wedge and Lens for now
             };
 
             commands.spawn((

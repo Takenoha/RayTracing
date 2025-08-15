@@ -27,6 +27,7 @@ use crate::HitRecord;
 use crate::Ray;
 use glam::{Mat4, Vec3};
 
+#[derive(Clone)]
 pub enum RenderableShape {
     Sphere {
         radius: f32,

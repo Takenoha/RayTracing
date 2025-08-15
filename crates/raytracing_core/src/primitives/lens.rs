@@ -53,6 +53,7 @@ impl Lens {
             left: s1,
             right: s2,
             operation: CsgOperation::Intersection,
+            renderable_shape_override: None,
         });
 
         // 2. レンズの直径を制限する円柱を定義
@@ -68,6 +69,7 @@ impl Lens {
             left: infinite_lens,
             right: aperture_cylinder,
             operation: CsgOperation::Intersection,
+            renderable_shape_override: None,
         });
 
         Lens {
