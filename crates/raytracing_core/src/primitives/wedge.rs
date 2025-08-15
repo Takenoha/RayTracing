@@ -1,6 +1,8 @@
 use glam::Vec3;
 
-use crate::{CSGObject, CsgOperation, HitRecord, Hittable, Material, Plane, Ray};
+use crate::{
+    CSGObject, CsgOperation, HitRecord, Hittable, Material, Plane, Ray, RenderableShape,
+};
 //ウェッジ
 pub struct Wedge {
     pub csg_object: Box<dyn Hittable>,
@@ -81,5 +83,14 @@ impl Wedge {
 impl Hittable for Wedge {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
         self.csg_object.intersect_all(ray, t_min, t_max)
+    }
+
+    fn get_renderable_shape(&self) -> Option<RenderableShape> {
+        // This is a CSG object, so we don't render it directly for now.
+        None
+    }
+
+    fn get_transform(&self) -> glam::Mat4 {
+        glam::Mat4::IDENTITY
     }
 }

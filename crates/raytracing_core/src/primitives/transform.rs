@@ -49,4 +49,12 @@ impl Hittable for Transform {
             None
         }
     }
+
+    fn get_renderable_shape(&self) -> Option<crate::RenderableShape> {
+        self.object.get_renderable_shape()
+    }
+
+    fn get_transform(&self) -> glam::Mat4 {
+        self.transform
+    }
 }

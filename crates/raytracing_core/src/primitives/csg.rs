@@ -1,4 +1,4 @@
-use crate::{CsgOperation, HitRecord, Hittable, Ray};
+use crate::{CsgOperation, HitRecord, Hittable, Ray, RenderableShape};
 // CSGオブジェクト
 pub struct CSGObject {
     pub left: Box<dyn Hittable>,
@@ -72,5 +72,15 @@ impl Hittable for CSGObject {
         } else {
             Some(result_hits)
         }
+    }
+
+    fn get_renderable_shape(&self) -> Option<RenderableShape> {
+        // For now, we don't render CSG objects directly.
+        // In the future, we could traverse the tree and return a list of shapes.
+        None
+    }
+
+    fn get_transform(&self) -> glam::Mat4 {
+        glam::Mat4::IDENTITY
     }
 }

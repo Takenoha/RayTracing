@@ -1,10 +1,10 @@
-use bevy::pbr::{DirectionalLight, StandardMaterial};
+use bevy::pbr::{DirectionalLight, MeshMaterial3d, StandardMaterial};
 use bevy::prelude::*;
 use bevy_flycam::prelude::*;
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 use csgrs::traits::CSG;
 use rand::{self, Rng};
-use raytracing_core::{Hittable, InfiniteCone, Scene};
+use raytracing_core::{Hittable, InfiniteCone, Scene, RenderableShape};
 type Csmesh = csgrs::mesh::Mesh<()>;
 #[derive(Resource)]
 pub struct RenderScene(pub Scene);
@@ -37,10 +37,13 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let scene = &render_scene.0;
     let results = &path_data.0;
     // 光の軌跡の描画
     spawn_arrows(&mut commands, &mut meshes, &mut materials, results);
+
+    // シーンのオブジェクトを描画
+    spawn_scene_objects(&mut commands, &mut meshes, &mut materials, &render_scene);
+
     commands.spawn(DirectionalLight {
         shadows_enabled: true,
         ..default()
@@ -48,14 +51,37 @@ fn setup(
     //commands.spawn((Camera3d::default(),));
 }
 
-fn spawn_object(
-    scene: &Scene,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-    meshes: &mut ResMut<Assets<Mesh>>,
+fn spawn_scene_objects(
     commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+    render_scene: &Res<RenderScene>,
 ) {
     let object_material = materials.add(Color::srgb(0.8, 0.7, 0.6));
+
+    for object in &render_scene.0.objects {
+        if let Some(shape) = object.get_renderable_shape() {
+            let transform = object.get_transform();
+            let bevy_transform = Transform::from_matrix(transform);
+
+            let mesh = match shape {
+                RenderableShape::Sphere { radius } => meshes.add(Sphere { radius }),
+                RenderableShape::Box { size } => meshes.add(Cuboid::new(size.x, size.y, size.z)),
+                RenderableShape::Plane { normal } => {
+                    meshes.add(Plane3d::new(normal.into(), Vec2::splat(1000.0)))
+                }
+                _ => continue,
+            };
+
+            commands.spawn((
+                Mesh3d(mesh),
+                MeshMaterial3d(object_material.clone()),
+                bevy_transform,
+            ));
+        }
+    }
 }
+
 
 fn spawn_arrows(
     commands: &mut Commands,

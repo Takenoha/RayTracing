@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Material, Ray};
+use crate::{HitRecord, Hittable, Material, Ray, RenderableShape};
 use glam::Vec3;
 // 軸並行な直方体 (AABB) 対角の座標を指定
 #[derive(Debug, Clone, Copy)]
@@ -61,6 +61,16 @@ impl Hittable for AxisAlignedBox {
         });
 
         Some(hits)
+    }
+
+    fn get_renderable_shape(&self) -> Option<RenderableShape> {
+        Some(RenderableShape::Box {
+            size: self.max - self.min,
+        })
+    }
+
+    fn get_transform(&self) -> glam::Mat4 {
+        glam::Mat4::IDENTITY
     }
 }
 

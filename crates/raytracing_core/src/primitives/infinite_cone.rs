@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Material, Ray};
+use crate::{HitRecord, Hittable, Material, Ray, RenderableShape};
 use glam::Vec3;
 // 無限円錐
 #[derive(Debug, Clone, Copy)]
@@ -83,5 +83,15 @@ impl Hittable for InfiniteCone {
         } else {
             Some(hits)
         }
+    }
+
+    fn get_renderable_shape(&self) -> Option<RenderableShape> {
+        // This is an infinite shape, so we don't render it directly.
+        // It will be rendered as part of a CSG object.
+        None
+    }
+
+    fn get_transform(&self) -> glam::Mat4 {
+        glam::Mat4::IDENTITY
     }
 }
