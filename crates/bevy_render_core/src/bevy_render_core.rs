@@ -1,11 +1,12 @@
 use bevy::pbr::{DirectionalLight, MeshMaterial3d, StandardMaterial};
 use bevy::prelude::*;
+use bevy::render::mesh::{Indices, PrimitiveTopology};
+use bevy::render::render_asset::RenderAssetUsages;
 use bevy_flycam::prelude::*;
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
-use csgrs::traits::CSG;
 use rand::{self, Rng};
 use raytracing_core::{Hittable, InfiniteCone, Scene, RenderableShape};
-type Csmesh = csgrs::mesh::Mesh<()>;
+
 #[derive(Resource)]
 pub struct RenderScene(pub Scene);
 #[derive(Resource)]
@@ -85,7 +86,56 @@ fn spawn_scene_objects(
                         ..default()
                     })
                 }
-                _ => continue, // Ignore Wedge and Lens for now
+                RenderableShape::Wedge { size, angle_deg } => {
+                    let w = size.x;
+                    let h = size.y;
+                    let d = size.z;
+
+                    let tan_angle = (angle_deg.to_radians() / 2.0).tan();
+                    let top_x = h * tan_angle;
+
+                    let vertices = &[
+                        // Bottom face
+                        Vec3::new(0.0, 0.0, -d / 2.0),
+                        Vec3::new(w, 0.0, -d / 2.0),
+                        Vec3::new(w, 0.0, d / 2.0),
+                        Vec3::new(0.0, 0.0, d / 2.0),
+                        // Top face
+                        Vec3::new(top_x, h, -d / 2.0),
+                        Vec3::new(w, h, -d / 2.0),
+                        Vec3::new(w, h, d / 2.0),
+                        Vec3::new(top_x, h, d / 2.0),
+                    ];
+
+                    let indices = Indices::U32(vec![
+                        0, 1, 2, 0, 2, 3, // bottom
+                        4, 5, 6, 4, 6, 7, // top
+                        0, 4, 7, 0, 7, 3, // left
+                        1, 5, 6, 1, 6, 2, // right
+                        0, 1, 5, 0, 5, 4, // back
+                        3, 2, 6, 3, 6, 7, // front
+                    ]);
+
+                    let mut mesh = Mesh::new(
+                        PrimitiveTopology::TriangleList,
+                        RenderAssetUsages::default(),
+                    );
+                    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices.to_vec());
+                    mesh.insert_indices(indices);
+                    meshes.add(mesh)
+                }
+                RenderableShape::Lens {
+                    thickness,
+                    diameter,
+                    ..
+                } => {
+                    // For now, approximate lens with a cylinder
+                    meshes.add(Cylinder {
+                        half_height: thickness / 2.0,
+                        radius: diameter / 2.0,
+                        ..default()
+                    })
+                }
             };
 
             commands.spawn((

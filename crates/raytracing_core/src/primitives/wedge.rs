@@ -6,6 +6,8 @@ use crate::{
 //ウェッジ
 pub struct Wedge {
     pub csg_object: Box<dyn Hittable>,
+    pub size: Vec3,
+    pub angle_deg: f32,
 }
 // Wedge構造体の実装ブロックを追加
 impl Wedge {
@@ -80,6 +82,8 @@ impl Wedge {
 
         Wedge {
             csg_object: final_wedge,
+            size,
+            angle_deg: wedge_angle_rad.to_degrees(),
         }
     }
 }
@@ -90,8 +94,10 @@ impl Hittable for Wedge {
     }
 
     fn get_renderable_shape(&self) -> Option<RenderableShape> {
-        // This is a CSG object, so we don't render it directly for now.
-        None
+        Some(RenderableShape::Wedge {
+            size: self.size,
+            angle_deg: self.angle_deg,
+        })
     }
 
     fn get_transform(&self) -> glam::Mat4 {

@@ -50,6 +50,12 @@ pub enum RenderableShape {
         size: Vec3,
         angle_deg: f32,
     },
+    Lens {
+        thickness: f32,
+        diameter: f32,
+        r1: f32,
+        r2: f32,
+    },
 }
 
 // ブーリアン演算の種類

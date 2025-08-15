@@ -5,6 +5,10 @@ use glam::{f32, Vec3};
 //レンズプリミティブ
 pub struct Lens {
     pub csg_object: Box<dyn Hittable>,
+    pub thickness: f32,
+    pub diameter: f32,
+    pub r1: f32,
+    pub r2: f32,
 }
 // Lens構造体の実装ブロックを追加
 impl Lens {
@@ -74,6 +78,10 @@ impl Lens {
 
         Lens {
             csg_object: final_lens,
+            thickness: center_thickness,
+            diameter,
+            r1,
+            r2,
         }
     }
 }
@@ -84,8 +92,12 @@ impl Hittable for Lens {
     }
 
     fn get_renderable_shape(&self) -> Option<RenderableShape> {
-        // This is a CSG object, so we don't render it directly for now.
-        None
+        Some(RenderableShape::Lens {
+            thickness: self.thickness,
+            diameter: self.diameter,
+            r1: self.r1,
+            r2: self.r2,
+        })
     }
 
     fn get_transform(&self) -> glam::Mat4 {
