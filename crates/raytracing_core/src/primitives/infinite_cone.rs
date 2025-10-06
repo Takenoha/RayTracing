@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Material, Ray};
+use crate::{AABB, HitRecord, Hittable, Material, Ray};
 use glam::Vec3;
 // 無限円錐
 #[derive(Debug, Clone, Copy)]
@@ -78,10 +78,14 @@ impl Hittable for InfiniteCone {
             }
         }
 
-        if hits.is_empty() {
-            None
-        } else {
-            Some(hits)
-        }
+        if hits.is_empty() { None } else { Some(hits) }
+    }
+
+    fn bounding_box(&self) -> Option<AABB> {
+        None // An infinite cone has no bounding box.
+    }
+
+    fn clone_hittable(&self) -> Box<dyn Hittable> {
+        Box::new(*self)
     }
 }

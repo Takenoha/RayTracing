@@ -1,31 +1,11 @@
-use raytracing_core::{Hittable, Ray, Scene};
-use serde::Deserialize;
-
-use crate::{
-    model::object_generator_config::{ObjectGeneratorConfig, RayGeneratorConfig},
-    object_config::ObjectConfig,
-    ray_config::RayConfig,
-};
-
-#[derive(Deserialize)]
-pub struct SceneConfig {
-    #[serde(default)]
-    pub rays: Vec<RayConfig>,
-    #[serde(default)]
-    pub ray_generators: Vec<RayGeneratorConfig>,
-    #[serde(default)]
-    pub object_generators: Vec<ObjectGeneratorConfig>,
-    #[serde(default)]
-    pub objects: Vec<ObjectConfig>,
-}
+use raytracing_core::{BVHNode, Hittable, HittableList, Ray, Scene};
 
 impl Into<Scene> for SceneConfig {
     fn into(self) -> Scene {
-        // 個別オブジェクト
-        let mut objects: Vec<Box<dyn Hittable>> =
+        // 1. Generate all objects from config
+        let mut all_objects: Vec<Box<dyn Hittable>> =
             self.objects.into_iter().map(Into::into).collect();
 
-        // ジェネレータから生成
         for generator in self.object_generators {
             match generator {
                 ObjectGeneratorConfig::ObjectGrid {
@@ -44,17 +24,31 @@ impl Into<Scene> for SceneConfig {
                             let pos = start_pos + (i as f32 * x_step) + (j as f32 * z_step);
                             let mut obj = template.clone();
                             obj.transform.position = pos.to_array();
-                            objects.push(obj.into());
+                            all_objects.push(obj.into());
                         }
                     }
                 }
             }
         }
 
-        // 個別レイ
-        let mut rays: Vec<Ray> = self.rays.into_iter().map(Into::into).collect();
+        // 2. Partition objects into bounded and unbounded
+        let (mut bounded_objects, unbounded_objects): (Vec<_>, Vec<_>) =
+            all_objects.into_iter().partition(|obj| obj.bounding_box().is_some());
 
-        // ray_generatorsから生成
+        // 3. Create a world list and add unbounded objects
+        let mut world_list = HittableList::new();
+        for obj in unbounded_objects {
+            world_list.add(obj);
+        }
+
+        // 4. Build BVH from bounded objects and add it to the world list
+        if !bounded_objects.is_empty() {
+            let bvh_node = BVHNode::new(&mut bounded_objects);
+            world_list.add(Box::new(bvh_node));
+        }
+
+        // 5. Generate all rays (same as before)
+        let mut rays: Vec<Ray> = self.rays.into_iter().map(Into::into).collect();
         for generator in self.ray_generators {
             match generator {
                 RayGeneratorConfig::ParallelGrid {
@@ -109,6 +103,10 @@ impl Into<Scene> for SceneConfig {
             }
         }
 
-        Scene { objects, rays }
+        // 6. Create the final scene with the world object
+        Scene {
+            world: Box::new(world_list),
+            rays,
+        }
     }
 }

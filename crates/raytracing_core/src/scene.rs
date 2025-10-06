@@ -26,7 +26,7 @@ fn refract(incident: Vec3, normal: Vec3, ior_ratio: f32) -> Option<Vec3> {
     Some((perp + parallel).normalize())
 }
 pub struct Scene {
-    pub objects: Vec<Box<dyn Hittable>>,
+    pub world: Box<dyn Hittable>,
     pub rays: Vec<Ray>,
 }
 
@@ -47,29 +47,26 @@ impl Scene {
             let infinity_distance = setting.infinity_distance;
 
             for _ in 0..max_bounces {
-                let mut closest_hit_record: Option<HitRecord> = None;
-                let mut t_closest = f32::INFINITY;
-
-                for object in &self.objects {
-                    if let Some(hits) = object.intersect_all(&ray, 0.001, t_closest) {
-                        if let Some(first_hit) = hits.first() {
-                            if first_hit.t < t_closest {
-                                t_closest = first_hit.t;
-                                closest_hit_record = Some(*first_hit);
-                            }
-                        }
-                    }
-                }
+                // The world object (a BVH or a HittableList) finds the closest hit.
+                let closest_hit_record = self
+                    .world
+                    .intersect_all(&ray, 0.001, f32::INFINITY)
+                    .and_then(|mut hits| {
+                        // intersect_all is expected to return sorted hits, but we sort again to be safe.
+                        hits.sort_by(|a, b| a.t.partial_cmp(&b.t).unwrap());
+                        hits.into_iter().next()
+                    });
                 if let Some(hit) = closest_hit_record {
                     path_points.push(hit.point);
 
                     let material = hit.material; // HitRecordから直接マテリアルを取得！
 
                     match material {
-                        Material::Mirror => {
+                        Material::Metal { .. } => {
+                            // For path visualization, treat metal as a perfect mirror.
                             ray.direction = reflect(ray.direction, hit.normal);
                         }
-                        Material::Glass { ior: material_ior } => {
+                        Material::Glass { ior: material_ior, .. } => {
                             let n1 = ray.current_ior;
                             let n2 = if hit.front_face { material_ior } else { 1.0 };
                             let ior_ratio = n1 / n2;
@@ -92,6 +89,14 @@ impl Scene {
                                 // 透過する場合（方向は変わらない）
                                 // ray.direction はそのまま
                             }
+                        }
+                        Material::Diffuse { .. } => {
+                            // For path visualization, we stop when hitting a diffuse surface.
+                            break;
+                        }
+                        Material::Light { .. } => {
+                            // For path visualization, we stop when hitting a light source.
+                            break;
                         }
                     }
                     ray.origin = hit.point + ray.direction * 0.001;

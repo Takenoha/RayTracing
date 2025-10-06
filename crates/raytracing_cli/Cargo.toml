@@ -13,4 +13,3 @@ serde = { version = "1.0", features = ["derive"] }
 toml = "0.8"
 raytracing_core.workspace = true
 raytracing_config.workspace = true
-bevy_render_cli.workspace = true

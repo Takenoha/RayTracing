@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Ray};
+use crate::{AABB, HitRecord, Hittable, Ray};
 use glam::Mat4;
 // 他のHittableオブジェクトに変換を適用するためのラッパー
 pub struct Transform {
@@ -48,5 +48,35 @@ impl Hittable for Transform {
         } else {
             None
         }
+    }
+
+    fn bounding_box(&self) -> Option<AABB> {
+        if let Some(bbox) = self.object.bounding_box() {
+            let mut min = glam::Vec3::splat(f32::INFINITY);
+            let mut max = glam::Vec3::splat(f32::NEG_INFINITY);
+
+            for i in 0..8 {
+                let x = if (i & 1) == 0 { bbox.min.x } else { bbox.max.x };
+                let y = if (i & 2) == 0 { bbox.min.y } else { bbox.max.y };
+                let z = if (i & 4) == 0 { bbox.min.z } else { bbox.max.z };
+
+                let corner = glam::Vec3::new(x, y, z);
+                let transformed_corner = self.transform.transform_point3(corner);
+
+                min = min.min(transformed_corner);
+                max = max.max(transformed_corner);
+            }
+            Some(AABB::new(min, max))
+        } else {
+            None
+        }
+    }
+
+    fn clone_hittable(&self) -> Box<dyn Hittable> {
+        Box::new(Transform {
+            object: self.object.clone_hittable(),
+            transform: self.transform,
+            inverse_transform: self.inverse_transform,
+        })
     }
 }

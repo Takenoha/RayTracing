@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Material, Ray};
+use crate::{AABB, CSGObject, HitRecord, Hittable, Material, Ray};
 use glam::Vec3;
 // 無限円柱
 #[derive(Debug, Clone, Copy)]
@@ -76,10 +76,14 @@ impl Hittable for InfiniteCylinder {
             }
         }
 
-        if hits.is_empty() {
-            None
-        } else {
-            Some(hits)
-        }
+        if hits.is_empty() { None } else { Some(hits) }
+    }
+
+    fn bounding_box(&self) -> Option<AABB> {
+        None // An infinite cylinder has no bounding box.
+    }
+
+    fn clone_hittable(&self) -> Box<dyn Hittable> {
+        Box::new(*self)
     }
 }

@@ -1,6 +1,6 @@
 use glam::Vec3;
 
-use crate::{CSGObject, CsgOperation, HitRecord, Hittable, Material, Plane, Ray};
+use crate::{AABB, CSGObject, CsgOperation, HitRecord, Hittable, Material, Plane, Ray};
 //ウェッジ
 pub struct Wedge {
     pub csg_object: Box<dyn Hittable>,
@@ -81,5 +81,15 @@ impl Wedge {
 impl Hittable for Wedge {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
         self.csg_object.intersect_all(ray, t_min, t_max)
+    }
+
+    fn bounding_box(&self) -> Option<AABB> {
+        self.csg_object.bounding_box()
+    }
+
+    fn clone_hittable(&self) -> Box<dyn Hittable> {
+        Box::new(Wedge {
+            csg_object: self.csg_object.clone_hittable(),
+        })
     }
 }
