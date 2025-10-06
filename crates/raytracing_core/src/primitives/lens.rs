@@ -1,7 +1,8 @@
 use crate::{
-    CSGObject, CsgOperation, HitRecord, Hittable, InfiniteCylinder, Material, Plane, Ray, Sphere,
+    AABB, CSGObject, CsgOperation, HitRecord, Hittable, InfiniteCylinder, Material, Plane, Ray,
+    Sphere,
 };
-use glam::{f32, Vec3};
+use glam::{Vec3, f32};
 //レンズプリミティブ
 pub struct Lens {
     pub csg_object: Box<dyn Hittable>,
@@ -79,5 +80,15 @@ impl Lens {
 impl Hittable for Lens {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
         self.csg_object.intersect_all(ray, t_min, t_max)
+    }
+
+    fn bounding_box(&self) -> Option<AABB> {
+        self.csg_object.bounding_box()
+    }
+
+    fn clone_hittable(&self) -> Box<dyn Hittable> {
+        Box::new(Lens {
+            csg_object: self.csg_object.clone_hittable(),
+        })
     }
 }

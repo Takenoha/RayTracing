@@ -1,0 +1,38 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      jules:
+        specifier: ^1.0.0
+        version: 1.0.0
+
+packages:
+
+  get-stdin@5.0.1:
+    resolution: {integrity: sha512-jZV7n6jGE3Gt7fgSTJoz91Ak5MuTLwMwkoYdjxuJ/AmjIsE1UC03y/IWkZCQGEvVNS9qoRNwy5BCqxImv0FVeA==}
+    engines: {node: '>=0.12.0'}
+
+  jules@1.0.0:
+    resolution: {integrity: sha512-zTCl9xy54mUArumz9Q4nJl+vjQwtHKWwe5kOV/Mm/L+udn2+d0w0qbANvh/+KqnnI3BzAIWGEBhzQCNsYL+TJg==}
+    engines: {node: '>8.0.0'}
+    hasBin: true
+
+  valid-identifier@0.0.1:
+    resolution: {integrity: sha512-+tLvqAC/bJrWSVqtNWNSx0UG6SYxKpGVCZWUdE0cmSUyEUELtx/23kIAfgiMtoiu8djPbJnh4iT8uTekRnLHNg==}
+
+snapshots:
+
+  get-stdin@5.0.1: {}
+
+  jules@1.0.0:
+    dependencies:
+      get-stdin: 5.0.1
+      valid-identifier: 0.0.1
+
+  valid-identifier@0.0.1: {}

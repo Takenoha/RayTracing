@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Material, Ray};
+use crate::{AABB, HitRecord, Hittable, Material, Ray};
 use glam::Vec3;
 // 軸並行な直方体 (AABB) 対角の座標を指定
 #[derive(Debug, Clone, Copy)]
@@ -61,6 +61,14 @@ impl Hittable for AxisAlignedBox {
         });
 
         Some(hits)
+    }
+
+    fn bounding_box(&self) -> Option<AABB> {
+        Some(AABB { min: self.min, max: self.max })
+    }
+
+    fn clone_hittable(&self) -> Box<dyn Hittable> {
+        Box::new(*self)
     }
 }
 

@@ -5,7 +5,7 @@ use raytracing_core::{
 };
 use serde::Deserialize;
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
 pub enum ShapeConfig {
     Sphere {

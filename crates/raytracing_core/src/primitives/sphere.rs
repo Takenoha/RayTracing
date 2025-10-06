@@ -1,4 +1,4 @@
-use crate::{HitRecord, Hittable, Material, Ray};
+use crate::{AABB, HitRecord, Hittable, Material, Ray};
 use glam::Vec3; // main.rsから移動させる共通定義をインポート
 
 #[derive(Debug, Clone, Copy)]
@@ -71,5 +71,16 @@ impl Hittable for Sphere {
         } else {
             Some(hits)
         }
+    }
+
+    fn bounding_box(&self) -> Option<AABB> {
+        Some(AABB {
+            min: self.center - Vec3::splat(self.radius),
+            max: self.center + Vec3::splat(self.radius),
+        })
+    }
+
+    fn clone_hittable(&self) -> Box<dyn Hittable> {
+        Box::new(*self)
     }
 }

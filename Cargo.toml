@@ -12,10 +12,13 @@ resolver = "2"
 raytracing_core = { path = "./crates/raytracing_core" }
 raytracing_config = { path = "./crates/raytracing_config" }
 raytracing_cli = { path = "./crates/raytracing_cli" }
-bevy_render_cli = {path = "./crates/bevy_render_cli"}
-bevy_render_core = {path = "./crates/bevy_render_core"}
-bevy_render_config = {path = "./crates/bevy_render_config"}
+raytracing_renderer = { path = "./crates/raytracing_renderer" }
+glam = { version = "0.29.0", features = ["serde"] }
+
 
 [dependencies]
 csgrs = "0.20.1"
 raytracing_cli.workspace = true
+raytracing_renderer.workspace = true
+raytracing_core.workspace = true
+raytracing_config.workspace = true

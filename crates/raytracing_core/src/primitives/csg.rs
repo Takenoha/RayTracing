@@ -1,4 +1,5 @@
-use crate::{CsgOperation, HitRecord, Hittable, Ray};
+use super::aabb::surrounding_box;
+use crate::{AABB, CsgOperation, HitRecord, Hittable, Ray};
 // CSGオブジェクト
 pub struct CSGObject {
     pub left: Box<dyn Hittable>,
@@ -72,5 +73,35 @@ impl Hittable for CSGObject {
         } else {
             Some(result_hits)
         }
+    }
+
+    fn bounding_box(&self) -> Option<AABB> {
+        let left_box = self.left.bounding_box();
+        let right_box = self.right.bounding_box();
+
+        match (left_box, right_box) {
+            (Some(l), Some(r)) => match self.operation {
+                CsgOperation::Union => Some(surrounding_box(&l, &r)),
+                CsgOperation::Intersection => {
+                    let min = l.min.max(r.min);
+                    let max = l.max.min(r.max);
+                    if min.x < max.x && min.y < max.y && min.z < max.z {
+                        Some(AABB::new(min, max))
+                    } else {
+                        None
+                    }
+                }
+                CsgOperation::Difference => Some(l),
+            },
+            _ => None, // If either child is unbounded, the result is complex.
+        }
+    }
+
+    fn clone_hittable(&self) -> Box<dyn Hittable> {
+        Box::new(CSGObject {
+            left: self.left.clone_hittable(),
+            right: self.right.clone_hittable(),
+            operation: self.operation,
+        })
     }
 }

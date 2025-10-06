@@ -7,3 +7,4 @@ pub mod shape_config;
 pub mod simulation_config;
 pub mod simulation_settings_config;
 pub mod transform_config;
+pub mod camera_config;
