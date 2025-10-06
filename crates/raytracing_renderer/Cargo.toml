@@ -1,0 +1,8 @@
+[package]
+name = "raytracing_renderer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+raytracing_core = { path = "../raytracing_core" }
+glam = "0.29.0"

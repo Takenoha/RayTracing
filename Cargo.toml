@@ -15,6 +15,7 @@ raytracing_cli = { path = "./crates/raytracing_cli" }
 bevy_render_cli = {path = "./crates/bevy_render_cli"}
 bevy_render_core = {path = "./crates/bevy_render_core"}
 bevy_render_config = {path = "./crates/bevy_render_config"}
+raytracing_renderer = { path = "./crates/raytracing_renderer" }
 
 [dependencies]
 csgrs = "0.20.1"

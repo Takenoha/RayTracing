@@ -4462,12 +4462,12 @@ dependencies = [
 name = "raytracing_cli"
 version = "0.1.0"
 dependencies = [
- "bevy_render_cli",
  "csv",
  "glam",
  "rand 0.8.5",
  "raytracing_config",
  "raytracing_core",
+ "raytracing_renderer",
  "serde",
  "toml",
 ]
@@ -4493,6 +4493,14 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "toml",
+]
+
+[[package]]
+name = "raytracing_renderer"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "raytracing_core",
 ]
 
 [[package]]
