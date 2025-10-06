@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         settings.image_height,
         settings.samples_per_pixel,
         settings.max_bounces,
-    );
+    )?;
 
     Ok(())
 }

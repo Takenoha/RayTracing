@@ -10,3 +10,10 @@ glam = { workspace = true }
 image = "0.25.1"
 rand = "0.8"
 rayon = "1.5"
+
+# CUDA dependencies
+cust = "0.3.2"
+raytracing_cuda_kernel = { path = "../raytracing_cuda_kernel" }
+
+[build-dependencies]
+cuda_builder = { git = "https://github.com/Rust-GPU/Rust-CUDA.git", package = "cuda_builder" }
