@@ -2,7 +2,10 @@ use std::{error::Error, path::Path};
 
 use serde::Deserialize;
 
-use crate::{model::camera_config::CameraConfig, scene_config::SceneConfig, simulation_settings_config::SimulationSettingsConfig};
+use crate::model::{
+    camera_config::CameraConfig, scene_config::SceneConfig,
+    simulation_settings_config::SimulationSettingsConfig,
+};
 
 #[derive(Deserialize)]
 pub struct SimulationConfig {

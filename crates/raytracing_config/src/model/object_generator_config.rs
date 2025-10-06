@@ -31,7 +31,7 @@ pub enum RayGeneratorConfig {
     },
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum ObjectGeneratorConfig {
     ObjectGrid {
@@ -162,7 +162,7 @@ pub fn build_scene_from_config(config: SceneDefinition) -> (Vec<Ray>, Vec<Box<dy
     // === 個別オブジェクトの追加 ===
     for obj_conf in config.objects {
         let material = obj_conf.material.into();
-        let mut hittable = obj_conf.shape.into_with(material);
+        let hittable = obj_conf.shape.into_with(material);
         // ... transformの適用 ...
         hittables.push(hittable);
     }

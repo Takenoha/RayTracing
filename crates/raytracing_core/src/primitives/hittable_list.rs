@@ -1,4 +1,4 @@
-use crate::{aabb::surrounding_box, AABB, HitRecord, Hittable, Ray};
+use crate::{primitives::aabb::surrounding_box, AABB, HitRecord, Hittable, Ray};
 
 // A list of hittable objects
 pub struct HittableList {

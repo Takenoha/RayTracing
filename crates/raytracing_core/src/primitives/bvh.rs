@@ -1,10 +1,20 @@
-use crate::{aabb::surrounding_box, AABB, HitRecord, Hittable, Ray};
+use crate::{primitives::aabb::surrounding_box, AABB, HitRecord, Hittable, Ray};
 use rand::Rng;
 
 pub struct BVHNode {
     left: Box<dyn Hittable>,
     right: Box<dyn Hittable>,
     bbox: AABB,
+}
+
+impl Clone for BVHNode {
+    fn clone(&self) -> Self {
+        Self {
+            left: self.left.clone_hittable(),
+            right: self.right.clone_hittable(),
+            bbox: self.bbox,
+        }
+    }
 }
 
 impl BVHNode {
@@ -66,5 +76,9 @@ impl Hittable for BVHNode {
             (None, Some(r)) => Some(r),
             (None, None) => None,
         }
+    }
+
+    fn clone_hittable(&self) -> Box<dyn Hittable> {
+        Box::new(self.clone())
     }
 }

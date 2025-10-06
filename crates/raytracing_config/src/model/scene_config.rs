@@ -1,12 +1,29 @@
 use raytracing_core::{BVHNode, Hittable, HittableList, Ray, Scene};
+use serde::Deserialize;
 
-impl Into<Scene> for SceneConfig {
-    fn into(self) -> Scene {
+use super::object_config::ObjectConfig;
+use super::object_generator_config::{ObjectGeneratorConfig, RayGeneratorConfig};
+use super::ray_config::RayConfig;
+
+#[derive(Deserialize, Debug, Default)]
+pub struct SceneConfig {
+    #[serde(default)]
+    pub objects: Vec<ObjectConfig>,
+    #[serde(default)]
+    pub object_generators: Vec<ObjectGeneratorConfig>,
+    #[serde(default)]
+    pub rays: Vec<RayConfig>,
+    #[serde(default)]
+    pub ray_generators: Vec<RayGeneratorConfig>,
+}
+
+impl From<SceneConfig> for Scene {
+    fn from(config: SceneConfig) -> Self {
         // 1. Generate all objects from config
         let mut all_objects: Vec<Box<dyn Hittable>> =
-            self.objects.into_iter().map(Into::into).collect();
+            config.objects.into_iter().map(Into::into).collect();
 
-        for generator in self.object_generators {
+        for generator in config.object_generators {
             match generator {
                 ObjectGeneratorConfig::ObjectGrid {
                     count_x,
@@ -48,8 +65,8 @@ impl Into<Scene> for SceneConfig {
         }
 
         // 5. Generate all rays (same as before)
-        let mut rays: Vec<Ray> = self.rays.into_iter().map(Into::into).collect();
-        for generator in self.ray_generators {
+        let mut rays: Vec<Ray> = config.rays.into_iter().map(Into::into).collect();
+        for generator in config.ray_generators {
             match generator {
                 RayGeneratorConfig::ParallelGrid {
                     origin_corner,

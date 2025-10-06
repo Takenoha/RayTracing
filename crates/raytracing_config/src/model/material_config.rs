@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use raytracing_core::Material;
 
-#[derive(Deserialize, Clone, Copy)] // 材質はコピーするのでClone, Copyも
+#[derive(Deserialize, Clone, Copy, Debug)] // 材質はコピーするのでClone, Copyも
 #[serde(tag = "type")]
 pub enum MaterialConfig {
     Glass {

@@ -3,7 +3,7 @@ use image::{ImageBuffer, Rgb};
 use rand::Rng;
 use rayon::prelude::*;
 use raytracing_config::model::camera_config::CameraConfig;
-use raytracing_core::{HitRecord, Hittable, Material, Ray, Scene};
+use raytracing_core::{Material, Ray, Scene};
 
 // --- Helper Functions for vector math and physics ---
 

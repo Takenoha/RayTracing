@@ -1,4 +1,4 @@
-use crate::{AABB, CSGObject, HitRecord, Hittable, Material, Ray};
+use crate::{AABB, HitRecord, Hittable, Material, Ray};
 use glam::Vec3;
 // 無限円柱
 #[derive(Debug, Clone, Copy)]

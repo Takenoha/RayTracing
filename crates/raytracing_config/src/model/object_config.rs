@@ -6,7 +6,7 @@ use crate::{
     material_config::MaterialConfig, shape_config::ShapeConfig, transform_config::TransformConfig,
 };
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct ObjectConfig {
     pub shape: ShapeConfig,
     pub material: MaterialConfig,
