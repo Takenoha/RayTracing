@@ -1,7 +1,7 @@
 [simulation_settings]
 infinity_distance = 50.0
 max_bounces = 100
-samples_per_pixel = 100
+samples_per_pixel = 50
 image_width = 800
 image_height = 600
 
@@ -31,11 +31,15 @@ transform = { position = [0.0, 30.0, 0.0], rotation_y_deg = 0.0 }
 
 
 
-[[scene.objects]]
-shape = { type = "Lens", thickness = 1.0, diameter = 9.0, r1 = 9.0, r2 = 9.0 }
-material = { type = "Glass", color = [0.8, 1.0, 0.85], ior = 1.5 }
-transform = { position = [0.0, 0.0, 10.0], rotation_z_deg = 0.0,rotation_y_deg = 0.0 }
+# [[scene.objects]]
+# shape = { type = "Lens", thickness = 1.0, diameter = 9.0, r1 = 9.0, r2 = 9.0 }
+# material = { type = "Glass", color = [1.0 , 0.01, 0.00], ior = 1.52 }
+# transform = { position = [0.0, 0.0, 10.0], rotation_z_deg = 0.0,rotation_y_deg = 0.0 }
 
+[[scene.objects]]
+shape = { type = "Lens", thickness = 3.0, diameter = 5.0, r1 = -12.0, r2 = 12.0 }
+material = { type = "Diffuse", color = [0.0, 0.0, 1.0]}
+transform = { position = [0.0, 0.0, 10.0], rotation_y_deg = 90.0}
 
   
 # 3. オブジェクトのグリッド配置
@@ -53,6 +57,6 @@ template.material = { type = "Diffuse", color = [0.8, 0.3, 0.3] }
 template.transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
 
 [[scene.objects]]
-shape = { type = "Cylinder", height = 20.0, radius = 1.0 }
+shape = { type = "Cylinder", height = 20.0, radius = 5.0}
 material = { type = "Diffuse", color = [0.2, 0.6, 0.8] }
 transform = { position = [0.0, 0.0, -10.0], rotation_x_deg = 0.0, rotation_y_deg = 0.0, rotation_z_deg = 0.0 }
