@@ -22,3 +22,4 @@ raytracing_cli.workspace = true
 raytracing_renderer.workspace = true
 raytracing_core.workspace = true
 raytracing_config.workspace = true
+glam = "0.29"

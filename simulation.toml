@@ -1,7 +1,7 @@
 [simulation_settings]
 infinity_distance = 50.0
 max_bounces = 100
-samples_per_pixel = 500
+samples_per_pixel = 100
 image_width = 800
 image_height = 600
 
@@ -36,10 +36,6 @@ shape = { type = "Lens", thickness = 1.0, diameter = 9.0, r1 = 9.0, r2 = 9.0 }
 material = { type = "Glass", color = [0.8, 1.0, 0.85], ior = 1.5 }
 transform = { position = [0.0, 0.0, 10.0], rotation_z_deg = 0.0,rotation_y_deg = 0.0 }
 
-[[scene.objects]]
-  shape = { type = "Sphere", radius = 1.0 }
-  material = { type = "Diffuse", color = [1.0, 0.3, 0.4] }
-  transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
 
   
 # 3. オブジェクトのグリッド配置
@@ -47,7 +43,7 @@ transform = { position = [0.0, 0.0, 10.0], rotation_z_deg = 0.0,rotation_y_deg =
 type = "ObjectGrid"
 count_x = 5
 count_z = 5
-position_start = [-10.0, -10.0, 10.0] # グリッドの開始位置
+position_start = [3.0, 0.0, -10.0] # グリッドの開始位置
 step_x = [5.0, 0.0, 0.0]             # X方向の配置ステップ
 step_z = [0.0, 0.0, -5.0]            # Z方向の配置ステップ
 

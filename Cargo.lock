@@ -1400,6 +1400,7 @@ name = "raytracing"
 version = "0.1.0"
 dependencies = [
  "csgrs",
+ "glam",
  "raytracing_cli",
  "raytracing_config",
  "raytracing_core",
