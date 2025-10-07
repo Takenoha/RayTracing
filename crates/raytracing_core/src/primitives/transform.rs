@@ -20,7 +20,11 @@ impl Hittable for Transform {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
         // 1. レイをワールド空間からオブジェクトのローカル空間へ逆変換
         let local_ray_origin = self.inverse_transform.transform_point3(ray.origin);
-        let local_ray_direction = self.inverse_transform.transform_vector3(ray.direction);
+        // direction を変換したら正規化しておく（スケールの影響を排除）
+        let local_ray_direction = self
+            .inverse_transform
+            .transform_vector3(ray.direction)
+            .normalize();
         let local_ray = Ray {
             origin: local_ray_origin,
             direction: local_ray_direction,

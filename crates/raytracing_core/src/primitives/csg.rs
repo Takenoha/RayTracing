@@ -21,7 +21,22 @@ impl Hittable for CSGObject {
         // 2. 全てのヒットを一つのリストにまとめ、tでソート
         let mut all_hits = hits_left.clone();
         all_hits.extend(hits_right.clone());
-        all_hits.sort_by(|a, b| a.t.partial_cmp(&b.t).unwrap());
+        // 非有限値を取り除き、安全にソートする
+        // デバッグしやすいように非有限値のヒットを標準エラー出力に出す
+        let mut removed = 0usize;
+        all_hits.retain(|h| {
+            if !h.t.is_finite() {
+                removed += 1;
+                eprintln!("CSG: dropped non-finite hit.t = {:?}", h.t);
+                false
+            } else {
+                true
+            }
+        });
+        if removed > 0 {
+            eprintln!("CSG: removed {} non-finite hit(s) before sorting", removed);
+        }
+        all_hits.sort_by(|a, b| a.t.total_cmp(&b.t));
 
         let mut result_hits = Vec::new();
 
@@ -29,9 +44,12 @@ impl Hittable for CSGObject {
         let mut in_left = false;
         let mut in_right = false;
 
+        // 比較用イプシロン（多少緩め）
+        let eps = 1e-4;
         for hit in &all_hits {
-            // このヒットがleft/rightどちらの物か判定
-            let hit_is_on_left = hits_left.iter().any(|h| (h.t - hit.t).abs() < 1e-6);
+            // このヒットが left / right のどちらに由来するか判定（両方に該当する場合もある）
+            let hit_on_left = hits_left.iter().any(|h| (h.t - hit.t).abs() < eps);
+            let hit_on_right = hits_right.iter().any(|h| (h.t - hit.t).abs() < eps);
 
             // 演算前の状態を保存
             let was_inside = match self.operation {
@@ -40,10 +58,11 @@ impl Hittable for CSGObject {
                 CsgOperation::Difference => in_left && !in_right,
             };
 
-            // 内外状態を更新
-            if hit_is_on_left {
+            // 内外状態を更新（両方にヒットした場合は両方をトグル）
+            if hit_on_left {
                 in_left = !in_left;
-            } else {
+            }
+            if hit_on_right {
                 in_right = !in_right;
             }
 
@@ -56,8 +75,9 @@ impl Hittable for CSGObject {
 
             // 状態が変化した（＝CSGオブジェクトの表面を通過した）なら、そのヒットは有効
             if was_inside != is_inside {
-                // Differenceの場合、rightオブジェクトの法線は反転させる必要がある
-                if self.operation == CsgOperation::Difference && !hit_is_on_left {
+                // Difference の場合、right 由来のヒットについては法線を反転する必要がある
+                // （今回の実装では「right のみ由来」なら反転、両方由来のときは元の法線を使う）
+                if self.operation == CsgOperation::Difference && hit_on_right && !hit_on_left {
                     let mut inverted_hit = *hit;
                     inverted_hit.normal = -hit.normal;
                     inverted_hit.front_face = !hit.front_face;

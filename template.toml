@@ -56,3 +56,77 @@ current_ior = 1.0
 [[scene.rays]]
 origin = [0.0, 0.0, 0.0]
 direction = [1.0, 0.0, 0.0]
+
+[[objects]]
+shape = { type = "Lens", thickness = 2.0, diameter = 18.0, r1 = 20.0, r2 = 20.0 }
+material = { type = "Glass", ior = 1.52 }
+transform = { position = [0.0, 0.0, 0.0], rotation_z_deg = 10.0 }
+
+[[scene.objects]]
+shape = { type = "Sphere", radius = 5.0 }
+material = { type = "Glass", color = [0.8, 1.0, 0.85], ior = 1.5 }
+transform = { position = [-10.0, 0.0, 0.0], rotation_y_deg = 0.0 }
+
+
+[[scene.objects]]
+shape = { type = "Plane", normal = [0.0, 1.0, 0.0] }
+material = { type = "Glass", ior = 1.2 }
+transform = { position = [0.0, -10.0, 0.0],rotation_y_deg = 0.0 }
+
+[[scene.objects]]
+shape = { type = "Lens", thickness = 1.0, diameter = 6.0, r1 = 10.0, r2 = 5.0 }
+material = { type = "Diffuse", color = [0.8, 0.3, 0.3] }
+transform = { position = [0.0, 0.0, 15.0], rotation_z_deg = 0.0,rotation_y_deg = 90.0 }
+
+[[scene.objects]]
+# 床
+shape = { type = "Plane", normal = [0.0, 1.0, 0.0] }
+material = { type = "Metal", color = [0.8, 0.8, 0.8], fuzz = 0.2 }
+transform = { position = [0.0, -10.0, 0.0], rotation_y_deg = 0.0 }
+
+[[scene.objects]]
+shape = { type = "Cylinder", height = 20.0, radius = 5.0 }
+material = { type = "Diffuse", color = [0.2, 0.6, 0.8] }
+transform = { position = [0.0, 0.0, -10.0], rotation_x_deg = 0.0, rotation_y_deg = 0.0, rotation_z_deg = 0.0 }
+
+
+[[scene.objects]]
+  shape = { type = "Sphere", radius = 3.0 }
+  material = { type = "Light", color = [4.0, 4.0, 4.0] }
+  transform = { position = [0.0, 0.0, -25.0], rotation_y_deg = 0.0 }
+
+# 3. オブジェクトのグリッド配置
+[[scene.object_generators]]
+type = "ObjectGrid"
+count_x = 5
+count_z = 5
+position_start = [-10.0, -10.0, 10.0] # グリッドの開始位置
+step_x = [5.0, 0.0, 0.0]             # X方向の配置ステップ
+step_z = [0.0, 0.0, -5.0]            # Z方向の配置ステップ
+
+# グリッド配置するオブジェクトのテンプレート
+template.shape = { type = "Sphere", radius = 1.5 }
+template.material = { type = "Diffuse", color = [0.8, 0.3, 0.3] }
+template.transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
+
+# 2. プロジェクターのような点光源
+[[scene.ray_generators]]
+type = "Projector"
+origin = [-15.0, 5.0, 0.0]          # プロジェクター位置
+target_corner = [0.0, -5.0, 0.0]    # 投影面の左上（例）
+target_u = [0.0, 10.0, 0.0]         # Uベクトル（幅方向）
+target_v = [0.0, 0.0, 10.0]         # Vベクトル（高さ方向）
+count_u = 4                       # 横分解能（増やすほど滑らか）
+count_v = 4                       # 縦分解能
+current_ior = 1.0
+# === オブジェクト生成ルール ===
+
+[[scene.objects]]
+shape = { type = "Lens", thickness = 2.0, diameter = 3.0, r1 = 10.0, r2 = 10.0 }
+material = { type = "Diffuse", color = [0.8, 0.3, 0.3] }
+transform = { position = [0.0, 0.0, 25.0], rotation_z_deg = 0.0,rotation_y_deg = 90.0 }
+
+[[scene.objects]]
+shape = { type = "Intersection",a = { type = "Sphere", radius = 3.0, center = [-1.5, 0.0, 0.0] },b = { type = "Sphere", radius = 3.0, center = [ 1.5, 0.0, 0.0] } }
+material = { type = "Diffuse", color = [0.7, 0.2, 0.2] }
+transform = { position = [0.0, 0.0, 0.0], rotation_x_deg = 0.0, rotation_y_deg = 90.0, rotation_z_deg = 0.0 }

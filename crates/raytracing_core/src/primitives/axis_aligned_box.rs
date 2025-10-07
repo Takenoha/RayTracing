@@ -10,61 +10,86 @@ pub struct AxisAlignedBox {
 // AxisAlignedBox のための Hittable 実装
 impl Hittable for AxisAlignedBox {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
-        let mut tmin = t_min;
-        let mut tmax = t_max;
+        let eps = 1e-8;
+        let mut t0 = t_min;
+        let mut t1 = t_max;
 
-        // 各軸 (X, Y, Z) に対してSlab Testを実行
+        // 各軸でスラブを計算。dir が 0 の場合は原点成分が範囲内か確認する
         for i in 0..3 {
-            // レイの方向の逆数。ゼロ除算を避ける
-            let inv_d = 1.0 / ray.direction[i];
-            let mut t0 = (self.min[i] - ray.origin[i]) * inv_d;
-            let mut t1 = (self.max[i] - ray.origin[i]) * inv_d;
+            let origin_comp = ray.origin[i];
+            let dir_comp = ray.direction[i];
+            let min_comp = self.min[i];
+            let max_comp = self.max[i];
 
-            // レイの進行方向に応じて、t0とt1（スラブへの入口と出口）を入れ替える
-            if inv_d < 0.0 {
-                std::mem::swap(&mut t0, &mut t1);
+            if dir_comp.abs() < eps {
+                // 平行 -> origin が slab の間にあるかを確認
+                if origin_comp < min_comp - eps || origin_comp > max_comp + eps {
+                    return None;
+                } else {
+                    continue;
+                }
             }
 
-            // これまで計算された全体の区間と、現在の軸の区間の共通部分を求める
-            tmin = tmin.max(t0);
-            tmax = tmax.min(t1);
+            let inv = 1.0 / dir_comp;
+            let mut t_near = (min_comp - origin_comp) * inv;
+            let mut t_far = (max_comp - origin_comp) * inv;
+            if t_near > t_far {
+                std::mem::swap(&mut t_near, &mut t_far);
+            }
 
-            // 共通区間がなくなれば、ヒットしない
-            if tmax <= tmin {
+            t0 = t0.max(t_near);
+            t1 = t1.min(t_far);
+            if t1 <= t0 {
                 return None;
             }
         }
 
-        // --- 有効な交差区間 [tmin, tmax] が見つかった ---
+        // t0 が第一交点、t1 が第二交点
         let mut hits = Vec::new();
+        for &t in &[t0, t1] {
+            if !t.is_finite() {
+                continue;
+            }
+            let point = ray.origin + t * ray.direction;
+            // 法線推定：どの軸で境界に近いかで決める（単純化）
+            let mut normal = Vec3::ZERO;
+            for axis in 0..3 {
+                if (point[axis] - self.min[axis]).abs() < 1e-4 {
+                    let mut n = Vec3::ZERO;
+                    n[axis] = -1.0;
+                    normal = n;
+                    break;
+                }
+                if (point[axis] - self.max[axis]).abs() < 1e-4 {
+                    let mut n = Vec3::ZERO;
+                    n[axis] = 1.0;
+                    normal = n;
+                    break;
+                }
+            }
+            if normal == Vec3::ZERO {
+                // 安定化 fallback
+                normal = (point - (self.min + self.max) * 0.5).normalize_or_zero();
+            }
+            let front_face = ray.direction.dot(normal) < 0.0;
+            let normal = if front_face { normal } else { -normal };
+            hits.push(HitRecord {
+                t,
+                point,
+                normal,
+                front_face,
+                material: self.material,
+            });
+        }
 
-        // 最初のヒット (入口)
-        let point1 = ray.origin + tmin * ray.direction;
-        let normal1 = self.calculate_normal(point1);
-        hits.push(HitRecord {
-            t: tmin,
-            point: point1,
-            normal: normal1,
-            front_face: ray.direction.dot(normal1) < 0.0,
-            material: self.material,
-        });
-
-        // 2番目のヒット (出口)
-        let point2 = ray.origin + tmax * ray.direction;
-        let normal2 = -self.calculate_normal(point2); // 出口の法線は内側を向く
-        hits.push(HitRecord {
-            t: tmax,
-            point: point2,
-            normal: normal2,
-            front_face: ray.direction.dot(normal2) < 0.0,
-            material: self.material,
-        });
-
-        Some(hits)
+        if hits.is_empty() { None } else { Some(hits) }
     }
 
     fn bounding_box(&self) -> Option<AABB> {
-        Some(AABB { min: self.min, max: self.max })
+        Some(AABB {
+            min: self.min,
+            max: self.max,
+        })
     }
 
     fn clone_hittable(&self) -> Box<dyn Hittable> {

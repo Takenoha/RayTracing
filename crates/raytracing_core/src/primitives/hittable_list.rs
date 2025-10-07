@@ -1,4 +1,4 @@
-use crate::{primitives::aabb::surrounding_box, AABB, HitRecord, Hittable, Ray};
+use crate::{AABB, HitRecord, Hittable, Ray, primitives::aabb::surrounding_box};
 
 // A list of hittable objects
 pub struct HittableList {
@@ -7,7 +7,9 @@ pub struct HittableList {
 
 impl HittableList {
     pub fn new() -> Self {
-        Self { objects: Vec::new() }
+        Self {
+            objects: Vec::new(),
+        }
     }
 
     pub fn add(&mut self, object: Box<dyn Hittable>) {
@@ -17,24 +19,34 @@ impl HittableList {
 
 impl Hittable for HittableList {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
-        let mut all_hits = Vec::new();
-        let mut closest_so_far = t_max;
-
-        for object in &self.objects {
-            // By reducing t_max with each hit, we can prune the search space
-            if let Some(mut hits) = object.intersect_all(ray, t_min, closest_so_far) {
-                if let Some(first_hit) = hits.first() {
-                    closest_so_far = first_hit.t;
-                }
-                all_hits.append(&mut hits);
-            }
+        let mut hits = Vec::new();
+        for obj in &self.objects {
+            // obj.intersect_all が None を返す可能性があるので安全に扱う
+            let child_hits = obj.intersect_all(ray, t_min, t_max).unwrap_or_default();
+            hits.extend(child_hits);
         }
-
-        if all_hits.is_empty() {
+        // non-finite な t を落とす（念のため）
+        let before = hits.len();
+        hits.retain(|h| {
+            if !h.t.is_finite() {
+                eprintln!("HittableList: dropped non-finite hit.t = {:?}", h.t);
+                false
+            } else {
+                true
+            }
+        });
+        if hits.is_empty() {
             None
         } else {
-            all_hits.sort_by(|a, b| a.t.partial_cmp(&b.t).unwrap());
-            Some(all_hits)
+            // 必要ならここで t でソート（安定ソート）
+            hits.sort_by(|a, b| a.t.total_cmp(&b.t));
+            if hits.len() != before {
+                eprintln!(
+                    "HittableList: removed {} invalid hit(s)",
+                    before - hits.len()
+                );
+            }
+            Some(hits)
         }
     }
 

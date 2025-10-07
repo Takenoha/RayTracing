@@ -49,8 +49,9 @@ impl From<SceneConfig> for Scene {
         }
 
         // 2. Partition objects into bounded and unbounded
-        let (mut bounded_objects, unbounded_objects): (Vec<_>, Vec<_>) =
-            all_objects.into_iter().partition(|obj| obj.bounding_box().is_some());
+        let (mut bounded_objects, unbounded_objects): (Vec<_>, Vec<_>) = all_objects
+            .into_iter()
+            .partition(|obj| obj.bounding_box().is_some());
 
         // 3. Create a world list and add unbounded objects
         let mut world_list = HittableList::new();
@@ -109,9 +110,10 @@ impl From<SceneConfig> for Scene {
                         for j in 0..count_v {
                             let target_point =
                                 target_c + (i as f32 * target_u_step) + (j as f32 * target_v_step);
+                            let dir = (target_point - ray_origin).normalize();
                             rays.push(Ray {
                                 origin: ray_origin,
-                                direction: (target_point - ray_origin).normalize(),
+                                direction: dir,
                                 current_ior,
                             });
                         }

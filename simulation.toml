@@ -1,23 +1,47 @@
 [simulation_settings]
 infinity_distance = 50.0
-max_bounces = 50
-samples_per_pixel = 100
+max_bounces = 100
+samples_per_pixel = 500
 image_width = 800
 image_height = 600
 
 # === レイ生成ルール ===
-# 2. プロジェクターのような点光源
-[[scene.ray_generators]]
-type = "Projector"
-origin = [-15.0, 0.0, 0.0]         # 光源の単一の始点
-target_corner = [-5.0, -5.0, -5.0] # 投影面の開始角
-target_u = [0.0, 10.0, 0.0]        # 投影面のU方向ベクトル
-target_v = [0.0, 0.0, 10.0]        # 投影面のV方向ベクトル
-count_u = 3                      # U方向のレイの数
-count_v = 1                       # V方向のレイの数
-current_ior = 1.0
-# === オブジェクト生成ルール ===
 
+
+
+# === 個別に配置するオブジェクト ===
+[[scene.objects]]
+# 床
+shape = { type = "Plane", normal = [0.0, 1.0, 0.0] }
+material = { type = "Diffuse", color = [0.8, 0.8, 0.8]}
+transform = { position = [0.0, -10.0, 0.0], rotation_x_deg = 0.0 }
+
+
+[camera]
+lookfrom = [0.0, 0.0, 30.0]
+lookat = [0.0, 0.0, 0.0]
+vfov = 90.0
+
+
+[[scene.objects]]
+# 床
+shape = { type = "Plane", normal = [0.0, 1.0, 0.0] }
+material = { type = "Light", color = [1.0, 1.0, 1.0] }
+transform = { position = [0.0, 30.0, 0.0], rotation_y_deg = 0.0 }
+
+
+
+[[scene.objects]]
+shape = { type = "Lens", thickness = 1.0, diameter = 9.0, r1 = 9.0, r2 = 9.0 }
+material = { type = "Glass", color = [0.8, 1.0, 0.85], ior = 1.5 }
+transform = { position = [0.0, 0.0, 10.0], rotation_z_deg = 0.0,rotation_y_deg = 0.0 }
+
+[[scene.objects]]
+  shape = { type = "Sphere", radius = 1.0 }
+  material = { type = "Diffuse", color = [1.0, 0.3, 0.4] }
+  transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
+
+  
 # 3. オブジェクトのグリッド配置
 [[scene.object_generators]]
 type = "ObjectGrid"
@@ -31,30 +55,8 @@ step_z = [0.0, 0.0, -5.0]            # Z方向の配置ステップ
 template.shape = { type = "Sphere", radius = 1.5 }
 template.material = { type = "Diffuse", color = [0.8, 0.3, 0.3] }
 template.transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
-# === 個別に配置するオブジェクト ===
-[[scene.objects]]
-# 床
-shape = { type = "Plane", normal = [0.0, 1.0, 0.0] }
-material = { type = "Metal", color = [0.8, 0.8, 0.8], fuzz = 0.2 }
-transform = { position = [0.0, -10.0, 0.0], rotation_y_deg = 0.0 }
-
 
 [[scene.objects]]
-shape = { type = "Plane", normal = [0.0, 1.0, 0.0] }
-material = { type = "Glass", ior = 1.2 }
-transform = { position = [0.0, -10.0, 0.0],rotation_y_deg = 0.0 }
-
-[camera]
-lookfrom = [0.0, 0.0, 25.0]
-lookat = [0.0, 0.0, 0.0]
-vfov = 90.0
-
-[[scene.objects]]
-  shape = { type = "Sphere", radius = 3.0 }
-  material = { type = "Light", color = [4.0, 4.0, 4.0] }
-  transform = { position = [0.0, 0.0, 0.0], rotation_y_deg = 0.0 }
-
-[[scene.objects]]
-shape = { type = "Sphere", radius = 5.0 }
-material = { type = "Glass", color = [0.8, 1.0, 0.85], ior = 1.5 }
-transform = { position = [-10.0, 0.0, 0.0], rotation_y_deg = 0.0 }
+shape = { type = "Cylinder", height = 20.0, radius = 1.0 }
+material = { type = "Diffuse", color = [0.2, 0.6, 0.8] }
+transform = { position = [0.0, 0.0, -10.0], rotation_x_deg = 0.0, rotation_y_deg = 0.0, rotation_z_deg = 0.0 }

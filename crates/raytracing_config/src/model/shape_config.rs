@@ -1,15 +1,21 @@
 use glam::Vec3;
 use raytracing_core::{
     AxisAlignedBox, CSGObject, CsgOperation, Hittable, InfiniteCone, InfiniteCylinder, Lens,
-    Material, Plane, Sphere, Wedge,
+    Material, Plane, Ray, Sphere, Wedge,
 };
 use serde::Deserialize;
+
+fn default_center() -> [f32; 3] {
+    [0.0, 0.0, 0.0]
+}
 
 #[derive(Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
 pub enum ShapeConfig {
     Sphere {
         radius: f32,
+        #[serde(default = "default_center")]
+        center: [f32; 3],
     },
     Box {
         size: [f32; 3],
@@ -53,8 +59,8 @@ pub enum ShapeConfig {
 impl ShapeConfig {
     pub fn into_with(self, material: Material) -> Box<dyn Hittable> {
         match self {
-            ShapeConfig::Sphere { radius } => Box::new(Sphere {
-                center: Vec3::ZERO,
+            ShapeConfig::Sphere { radius, center } => Box::new(Sphere {
+                center: Vec3::from(center),
                 radius,
                 material,
             }),
@@ -73,30 +79,26 @@ impl ShapeConfig {
             }),
             ShapeConfig::Cylinder { height, radius } => {
                 let half_height = height / 2.0;
+                // 本体は無限円柱（Y軸方向）
                 let body = Box::new(InfiniteCylinder {
                     axis_point: Vec3::ZERO,
                     axis_dir: Vec3::Y,
                     radius,
+                    material: material.clone(),
+                });
+
+                // 広いX/Z範囲で高さを切り取るための大きな box を使う（事実上のキャップ）
+                let large = 1000.00;
+                let cap_box = Box::new(AxisAlignedBox {
+                    min: Vec3::new(-large, -half_height, -large),
+                    max: Vec3::new(large, half_height, large),
                     material,
                 });
-                let cap_top = Box::new(Plane {
-                    point: Vec3::new(0.0, half_height, 0.0),
-                    normal: Vec3::NEG_Y,
-                    material,
-                });
-                let cap_bottom = Box::new(Plane {
-                    point: Vec3::new(0.0, -half_height, 0.0),
-                    normal: Vec3::Y,
-                    material,
-                });
-                let capped_cylinder = Box::new(CSGObject {
-                    left: body,
-                    right: cap_top,
-                    operation: CsgOperation::Intersection,
-                });
+
+                // InfiniteCylinder ∩ cap_box で有限高さの円柱になる
                 Box::new(CSGObject {
-                    left: capped_cylinder,
-                    right: cap_bottom,
+                    left: body,
+                    right: cap_box,
                     operation: CsgOperation::Intersection,
                 })
             }
