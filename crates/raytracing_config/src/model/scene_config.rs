@@ -1,9 +1,9 @@
-use raytracing_core::{BVHNode, Hittable, HittableList, Ray, Scene};
-use serde::Deserialize;
-
+use super::material_config::MaterialConfig;
 use super::object_config::ObjectConfig;
 use super::object_generator_config::{ObjectGeneratorConfig, RayGeneratorConfig};
 use super::ray_config::RayConfig;
+use raytracing_core::{BVHNode, Hittable, HittableList, Ray, Scene};
+use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Default)]
 pub struct SceneConfig {
@@ -19,9 +19,8 @@ pub struct SceneConfig {
 
 impl From<SceneConfig> for Scene {
     fn from(config: SceneConfig) -> Self {
-        // 1. Generate all objects from config
-        let mut all_objects: Vec<Box<dyn Hittable>> =
-            config.objects.into_iter().map(Into::into).collect();
+        // 1. Generate all ObjectConfig instances
+        let mut all_object_configs: Vec<ObjectConfig> = config.objects;
 
         for generator in config.object_generators {
             match generator {
@@ -41,28 +40,46 @@ impl From<SceneConfig> for Scene {
                             let pos = start_pos + (i as f32 * x_step) + (j as f32 * z_step);
                             let mut obj = template.clone();
                             obj.transform.position = pos.to_array();
-                            all_objects.push(obj.into());
+                            all_object_configs.push(obj);
                         }
                     }
                 }
             }
         }
 
-        // 2. Partition objects into bounded and unbounded
-        let (mut bounded_objects, unbounded_objects): (Vec<_>, Vec<_>) = all_objects
+        // 2. Partition configs into lights and non-lights, then convert to Hittable
+        let mut light_objects: Vec<Box<dyn Hittable>> = Vec::new();
+        let mut all_world_objects: Vec<Box<dyn Hittable>> = Vec::new();
+
+        for obj_config in all_object_configs {
+            let is_light = matches!(obj_config.material, MaterialConfig::Light { .. });
+            let hittable: Box<dyn Hittable> = obj_config.into();
+
+            if is_light {
+                light_objects.push(hittable.clone_hittable());
+            }
+            all_world_objects.push(hittable);
+        }
+
+        // 3. Build the world from all objects
+        let (mut bounded_objects, unbounded_objects): (Vec<_>, Vec<_>) = all_world_objects
             .into_iter()
             .partition(|obj| obj.bounding_box().is_some());
 
-        // 3. Create a world list and add unbounded objects
         let mut world_list = HittableList::new();
         for obj in unbounded_objects {
             world_list.add(obj);
         }
 
-        // 4. Build BVH from bounded objects and add it to the world list
         if !bounded_objects.is_empty() {
             let bvh_node = BVHNode::new(&mut bounded_objects);
             world_list.add(Box::new(bvh_node));
+        }
+
+        // 4. Build the lights list
+        let mut lights_list = HittableList::new();
+        for light in light_objects {
+            lights_list.add(light);
         }
 
         // 5. Generate all rays (same as before)
@@ -122,9 +139,10 @@ impl From<SceneConfig> for Scene {
             }
         }
 
-        // 6. Create the final scene with the world object
+        // 6. Create the final scene
         Scene {
             world: Box::new(world_list),
+            lights: Box::new(lights_list),
             rays,
         }
     }

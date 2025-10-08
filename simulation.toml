@@ -1,7 +1,7 @@
 [simulation_settings]
 infinity_distance = 50.0
 max_bounces = 100
-samples_per_pixel = 50
+samples_per_pixel = 500
 image_width = 800
 image_height = 600
 
@@ -39,7 +39,7 @@ transform = { position = [0.0, 30.0, 0.0], rotation_y_deg = 0.0 }
 [[scene.objects]]
 shape = { type = "Lens", thickness = 3.0, diameter = 5.0, r1 = 12.0, r2 = 12.0 }
 material = { type = "Diffuse", color = [0.0, 0.0, 1.0]}
-transform = { position = [0.0, 0.0, 10.0], rotation_y_deg = 90.0}
+transform = { position = [0.0, 0.0, 10.0], rotation_y_deg = 0.0}
 
   
 # 3. オブジェクトのグリッド配置

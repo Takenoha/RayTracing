@@ -1,30 +1,11 @@
 use glam::Vec3;
 use rand::Rng;
 
-use crate::{Hittable, Material};
+use crate::{reflect, refract, Hittable, Material};
 
-// 反射ベクトルを計算
-fn reflect(incident: Vec3, normal: Vec3) -> Vec3 {
-    incident - 2.0 * incident.dot(normal) * normal
-}
-
-// 屈折ベクトルを計算（全反射の可能性も考慮）
-fn refract(incident: Vec3, normal: Vec3, ior_ratio: f32) -> Option<Vec3> {
-    let cos_theta = (-incident).dot(normal).min(1.0);
-    let sin_theta_squared = 1.0 - cos_theta * cos_theta;
-
-    if ior_ratio * ior_ratio * sin_theta_squared > 1.0 {
-        println!("全反射が発生しました！ ior_ratio: {}", ior_ratio);
-        return None; // 全反射
-    }
-
-    let perp = ior_ratio * (incident + cos_theta * normal);
-    let parallel = -(1.0 - perp.length_squared()).abs().sqrt() * normal;
-
-    Some((perp + parallel).normalize())
-}
 pub struct Scene {
     pub world: Box<dyn Hittable>,
+    pub lights: Box<dyn Hittable>,
     pub rays: Vec<Ray>,
 }
 
@@ -64,21 +45,23 @@ impl Scene {
                             // For path visualization, treat metal as a perfect mirror.
                             ray.direction = reflect(ray.direction, hit.normal);
                         }
-                        Material::Glass { ior: material_ior, .. } => {
-                            let n1 = ray.current_ior;
-                            let n2 = if hit.front_face { material_ior } else { 1.0 };
-                            let ior_ratio = n1 / n2;
-
-                            if let Some(refracted_dir) =
-                                refract(ray.direction, hit.normal, ior_ratio)
-                            {
-                                ray.direction = refracted_dir;
-                                ray.current_ior = n2;
-                            } else {
-                                ray.direction = reflect(ray.direction, hit.normal);
-                            }
-                        }
-                        Material::HalfMirror { reflectance } => {
+                                            Material::Glass { ior: material_ior, .. } => {
+                                                let n1 = ray.current_ior;
+                                                let n2 = if hit.front_face { material_ior } else { 1.0 };
+                                                let ior_ratio = n1 / n2;
+                        
+                                                let unit_direction = ray.direction.normalize();
+                                                let cos_theta = (-unit_direction).dot(hit.normal).min(1.0);
+                                                let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
+                        
+                                                if (ior_ratio * sin_theta) > 1.0 {
+                                                    // Total internal reflection
+                                                    ray.direction = reflect(ray.direction, hit.normal);
+                                                } else {
+                                                    ray.direction = refract(ray.direction, hit.normal, ior_ratio);
+                                                    ray.current_ior = n2;
+                                                }
+                                            }                        Material::HalfMirror { reflectance } => {
                             // 0.0から1.0までの一様な乱数を生成
                             if rand::thread_rng().r#gen::<f32>() < reflectance {
                                 // 反射する場合

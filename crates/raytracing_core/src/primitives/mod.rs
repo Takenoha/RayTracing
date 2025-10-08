@@ -52,8 +52,27 @@ pub enum Material {
     Light { color: Vec3 },
 }
 
+impl Material {
+    pub fn emitted(&self) -> Vec3 {
+        match *self {
+            Material::Light { color } => color,
+            _ => Vec3::ZERO,
+        }
+    }
+}
+
 pub trait Hittable: Sync + Send {
     fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>>;
     fn bounding_box(&self) -> Option<AABB>;
     fn clone_hittable(&self) -> Box<dyn Hittable>;
+
+    // Default implementation for light sampling PDF
+    fn pdf_value(&self, _origin: Vec3, _direction: Vec3) -> f32 {
+        0.0
+    }
+
+    // Default implementation for generating a random direction towards the object
+    fn random(&self, _origin: Vec3) -> Vec3 {
+        Vec3::X // Should not be called on non-lights, default to an arbitrary vector
+    }
 }

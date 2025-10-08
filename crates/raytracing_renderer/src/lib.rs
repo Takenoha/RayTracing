@@ -3,41 +3,8 @@ use image::{ImageBuffer, Rgb};
 use rand::Rng;
 use rayon::prelude::*;
 use raytracing_config::model::camera_config::CameraConfig;
-use raytracing_core::{Material, Ray, Scene};
+use raytracing_core::{HitRecord, Material, Ray, Scene, Pdf, CosinePdf, HittablePdf, MixturePdf, reflect, refract, schlick};
 use std::path::Path;
-
-// --- Helper Functions for vector math and physics ---
-
-fn reflect(v: Vec3, n: Vec3) -> Vec3 {
-    v - 2.0 * v.dot(n) * n
-}
-
-fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) -> Vec3 {
-    let cos_theta = (-uv).dot(n).min(1.0);
-    let r_out_perp = etai_over_etat * (uv + cos_theta * n);
-    let r_out_parallel = -(1.0 - r_out_perp.length_squared()).abs().sqrt() * n;
-    r_out_perp + r_out_parallel
-}
-
-fn schlick(cosine: f32, ref_idx: f32) -> f32 {
-    let mut r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
-    r0 = r0 * r0;
-    r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
-}
-
-fn random_in_unit_sphere() -> Vec3 {
-    let mut rng = rand::thread_rng();
-    loop {
-        let p = Vec3::new(
-            rng.gen_range(-1.0..1.0),
-            rng.gen_range(-1.0..1.0),
-            rng.gen_range(-1.0..1.0),
-        );
-        if p.length_squared() < 1.0 {
-            return p;
-        }
-    }
-}
 
 // --- Camera ---
 
@@ -95,7 +62,6 @@ pub fn render(
     max_depth: u32,
     output_path: &Path,
 ) {
-    // Camera
     let camera = Camera::new(
         camera_config.lookfrom,
         camera_config.lookat,
@@ -104,10 +70,9 @@ pub fn render(
         width as f32 / height as f32,
     );
 
-    // Render using Rayon for parallel processing
     let pixels: Vec<Rgb<u8>> = (0..height)
         .into_par_iter()
-        .rev() // Start from the top row
+        .rev()
         .flat_map(|j| {
             (0..width)
                 .map(|i| {
@@ -121,7 +86,6 @@ pub fn render(
                         pixel_color += ray_color(&ray, scene, max_depth as i32);
                     }
 
-                    // Average color and apply gamma correction
                     let scale = 1.0 / samples_per_pixel as f32;
                     let r = (pixel_color.x * scale).sqrt();
                     let g = (pixel_color.y * scale).sqrt();
@@ -137,12 +101,10 @@ pub fn render(
         })
         .collect();
 
-    // Create image buffer from pixel data
     let raw_pixels: Vec<u8> = pixels.into_iter().flat_map(|p| p.0).collect();
     let img_buf: ImageBuffer<Rgb<u8>, Vec<u8>> =
         ImageBuffer::from_raw(width, height, raw_pixels).unwrap();
 
-    // Save the image
     img_buf.save(output_path).unwrap();
     println!(
         "レンダリングが完了し、'{:?}' に保存されました。",
@@ -150,91 +112,120 @@ pub fn render(
     );
 }
 
+// --- Scattering Logic ---
+
+// Returns: (attenuation, scattered_ray) for specular materials, or None for diffuse.
+fn scatter_specular(
+    material: &Material,
+    ray_in: &Ray,
+    hit: &HitRecord,
+) -> Option<(Vec3, Ray)> {
+    match *material {
+        Material::Metal { color, fuzz } => {
+            let reflected = reflect(ray_in.direction.normalize(), hit.normal);
+            let scattered = Ray {
+                origin: hit.point,
+                direction: reflected + fuzz * rand::thread_rng().gen_range(-1.0..1.0) * Vec3::ONE, // Simplified from random_in_unit_sphere
+                current_ior: ray_in.current_ior,
+            };
+            if scattered.direction.dot(hit.normal) > 0.0 {
+                Some((color, scattered))
+            } else {
+                None
+            }
+        }
+        Material::Glass { color, ior } => {
+            let etai_over_etat = if hit.front_face { 1.0 / ior } else { ior };
+            let unit_direction = ray_in.direction.normalize();
+            let cos_theta = (-unit_direction).dot(hit.normal).min(1.0);
+            let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
+            let reflect_prob = schlick(cos_theta, etai_over_etat);
+
+            let direction = if etai_over_etat * sin_theta > 1.0 || rand::thread_rng().r#gen::<f32>() < reflect_prob {
+                reflect(unit_direction, hit.normal)
+            } else {
+                refract(unit_direction, hit.normal, etai_over_etat)
+            };
+
+            let scattered = Ray {
+                origin: hit.point,
+                direction,
+                current_ior: if hit.front_face { ior } else { 1.0 },
+            };
+            Some((color, scattered))
+        }
+        _ => None,
+    }
+}
+
+// Returns: (attenuation, pdf) for diffuse materials, or None for specular.
+fn scatter_diffuse(
+    material: &Material,
+    hit: &HitRecord,
+) -> Option<(Vec3, CosinePdf)> {
+    match *material {
+        Material::Diffuse { color } => {
+            Some((color, CosinePdf::new(&hit.normal)))
+        }
+        _ => None,
+    }
+}
+
+
 // Recursively traces a ray and determines the color.
 fn ray_color(ray: &Ray, scene: &Scene, depth: i32) -> Vec3 {
     if depth <= 0 {
         return Vec3::ZERO;
     }
 
-    // Find the closest hit by intersecting the ray with the world object (which could be a BVH).
     let closest_hit = scene
         .world
         .intersect_all(ray, 0.001, f32::INFINITY)
         .and_then(|mut hits| {
-            // The list of hits should be sorted by t, so we can just take the first one.
             hits.sort_by(|a, b| a.t.partial_cmp(&b.t).unwrap());
             hits.into_iter().next()
         });
 
     if let Some(hit) = closest_hit {
-        // Calculate emitted light from the material itself
-        let emitted = match hit.material {
-            Material::Light { color } => color,
-            _ => Vec3::ZERO,
-        };
+        let emitted = hit.material.emitted();
 
-        // Calculate scattered light
-        let (maybe_scattered, attenuation) = match hit.material {
-            Material::Light { .. } => (None, Vec3::ZERO), // Lights emit, but don't scatter
-
-            Material::Diffuse { color } => {
-                let scatter_direction = hit.normal + random_in_unit_sphere().normalize();
-                let scattered = Ray {
-                    origin: hit.point,
-                    direction: scatter_direction,
-                    current_ior: ray.current_ior,
-                };
-                (Some(scattered), color)
-            }
-
-            Material::Metal { color, fuzz } => {
-                let reflected = reflect(ray.direction.normalize(), hit.normal);
-                let scattered = Ray {
-                    origin: hit.point,
-                    direction: reflected + fuzz * random_in_unit_sphere(),
-                    current_ior: ray.current_ior,
-                };
-                // Absorb rays that scatter below the surface
-                if scattered.direction.dot(hit.normal) > 0.0 {
-                    (Some(scattered), color)
-                } else {
-                    (None, Vec3::ZERO)
-                }
-            }
-
-            Material::Glass { color, ior } => {
-                let attenuation = color; // Use the material's color for attenuation
-                let etai_over_etat = if hit.front_face { 1.0 / ior } else { ior };
-                let unit_direction = ray.direction.normalize();
-                let cos_theta = (-unit_direction).dot(hit.normal).min(1.0);
-                let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
-                let reflect_prob = schlick(cos_theta, etai_over_etat);
-
-                let direction = if etai_over_etat * sin_theta > 1.0
-                    || rand::thread_rng().r#gen::<f32>() < reflect_prob
-                {
-                    reflect(unit_direction, hit.normal)
-                } else {
-                    refract(unit_direction, hit.normal, etai_over_etat)
-                };
-
-                let scattered = Ray {
-                    origin: hit.point,
-                    direction,
-                    current_ior: if hit.front_face { ior } else { 1.0 },
-                };
-                (Some(scattered), attenuation)
-            }
-            _ => (None, Vec3::ZERO), // Unhandled materials
-        };
-
-        if let Some(scattered_ray) = maybe_scattered {
-            emitted + attenuation * ray_color(&scattered_ray, scene, depth - 1)
-        } else {
-            emitted
+        // Handle specular materials (Metal, Glass)
+        if let Some((attenuation, scattered_ray)) = scatter_specular(&hit.material, ray, &hit) {
+            return emitted + attenuation * ray_color(&scattered_ray, scene, depth - 1);
         }
+
+        // Handle diffuse materials
+        if let Some((attenuation, cosine_pdf)) = scatter_diffuse(&hit.material, &hit) {
+            let light_pdf = HittablePdf::new(hit.point, &*scene.lights);
+            let mixture_pdf = MixturePdf::new(&light_pdf, &cosine_pdf);
+            
+            let scattered_direction = mixture_pdf.generate();
+            let pdf_val = mixture_pdf.value(scattered_direction);
+
+            let scattered_ray = Ray {
+                origin: hit.point,
+                direction: scattered_direction,
+                current_ior: ray.current_ior,
+            };
+
+            // The BRDF for Lambertian is attenuation / PI. The scattering PDF is cos_theta / PI.
+            // The final term is (attenuation * scattering_pdf * recursive_color) / mixture_pdf.
+            let scattering_pdf = cosine_pdf.value(scattered_direction);
+
+            // Avoid division by zero or negative PDFs
+            if pdf_val <= 1e-6 {
+                return emitted;
+            }
+
+            let recursive_color = ray_color(&scattered_ray, scene, depth - 1);
+
+            return emitted + (attenuation * scattering_pdf * recursive_color) / pdf_val;
+        }
+
+        // If it's neither specular nor diffuse (e.g. a light source), just return emitted.
+        return emitted;
+
     } else {
-        // If the ray doesn't hit anything, it's black (scene is lit from within)
         Vec3::ZERO
     }
 }

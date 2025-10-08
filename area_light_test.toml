@@ -1,0 +1,32 @@
+# Simulation settings for area light test
+[simulation_settings]
+image_width = 800
+image_height = 600
+samples_per_pixel = 100
+max_bounces = 50
+infinity_distance = 50.0
+
+# Camera settings
+[camera]
+lookfrom = [0.0, 5.0, 25.0]
+lookat = [0.0, 3.0, 0.0]
+vup = [0.0, 1.0, 0.0]
+vfov = 40.0
+
+# A large light source on the ceiling
+[[scene.objects]]
+shape = { type = "Box", size = [10.0, 0.1, 10.0] }
+material = { type = "Light", color = [4.0, 4.0, 4.0] }
+transform = { position = [0.0, 10.0, 0.0] }
+
+# A diffuse sphere to cast a soft shadow
+[[scene.objects]]
+shape = { type = "Sphere", radius = 2.0 }
+material = { type = "Diffuse", color = [1.0, 0.5, 0.5] }
+transform = { position = [0.0, 2.0, 0.0] }
+
+# A large ground plane
+[[scene.objects]]
+shape = { type = "Box", size = [50.0, 0.1, 50.0] }
+material = { type = "Diffuse", color = [0.8, 0.8, 0.8] }
+transform = { position = [0.0, -0.05, 0.0] }

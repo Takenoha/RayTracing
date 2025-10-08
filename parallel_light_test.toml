@@ -1,0 +1,33 @@
+# Simulation settings for parallel light test
+[simulation_settings]
+image_width = 800
+image_height = 600
+samples_per_pixel = 500
+max_bounces = 500
+infinity_distance = 100.0
+
+# Camera settings
+[camera]
+lookfrom = [0.0, 5.0, 25.0]
+lookat = [0.0, 3.0, 0.0]
+vup = [0.0, 1.0, 0.0]
+vfov = 40.0
+
+# A large, distant light source to simulate parallel light.
+# The light is positioned far away and angled to cast distinct shadows.
+[[scene.objects]]
+shape = { type = "Box", size = [50.0, 1.0, 50.0] } # A very large light source
+material = { type = "Light", color = [10.0, 10.0, 10.0] } # Make it very bright
+transform = { position = [0.0, 50.0, 0.0], rotation_z_deg = 0.0 } # Positioned far away and at an angle
+
+# A diffuse sphere to cast a shadow
+[[scene.objects]]
+shape = { type = "Sphere", radius = 2.0 }
+material = { type = "Glass", color = [1.0, 0.5, 0.5],ior = 1.52 }
+transform = { position = [0.0, 2.0, 0.0] }
+
+# A large ground plane
+[[scene.objects]]
+shape = { type = "Box", size = [50.0, 0.1, 50.0] }
+material = { type = "Diffuse", color = [0.8, 0.8, 0.8] }
+transform = { position = [0.0, -0.05, 0.0] }
