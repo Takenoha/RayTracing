@@ -1,7 +1,7 @@
 use glam::Vec3;
 use raytracing_core::{
     AxisAlignedBox, CSGObject, CsgOperation, Hittable, InfiniteCone, InfiniteCylinder, Lens,
-    Material, Plane, Ray, Sphere, Wedge,
+    Material, Plane, Sphere, Wedge,
 };
 use serde::Deserialize;
 

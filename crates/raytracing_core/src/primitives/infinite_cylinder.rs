@@ -11,7 +11,7 @@ pub struct InfiniteCylinder {
 }
 
 impl Hittable for InfiniteCylinder {
-    fn intersect_all(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<Vec<HitRecord>> {
+    fn intersect_all(&self, ray: &Ray, _t_min: f32, _t_max: f32) -> Option<Vec<HitRecord>> {
         let eps = 1e-8;
 
         // デバッグ出力を追加

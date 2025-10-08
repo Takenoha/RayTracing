@@ -4,6 +4,7 @@ use rand::Rng;
 use rayon::prelude::*;
 use raytracing_config::model::camera_config::CameraConfig;
 use raytracing_core::{Material, Ray, Scene};
+use std::path::Path;
 
 // --- Helper Functions for vector math and physics ---
 
@@ -92,6 +93,7 @@ pub fn render(
     height: u32,
     samples_per_pixel: u32,
     max_depth: u32,
+    output_path: &Path,
 ) {
     // Camera
     let camera = Camera::new(
@@ -141,8 +143,11 @@ pub fn render(
         ImageBuffer::from_raw(width, height, raw_pixels).unwrap();
 
     // Save the image
-    img_buf.save("output.png").unwrap();
-    println!("レンダリングが完了し、'output.png' に保存されました。");
+    img_buf.save(output_path).unwrap();
+    println!(
+        "レンダリングが完了し、'{:?}' に保存されました。",
+        output_path
+    );
 }
 
 // Recursively traces a ray and determines the color.

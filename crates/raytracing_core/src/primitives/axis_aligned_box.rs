@@ -100,6 +100,7 @@ impl Hittable for AxisAlignedBox {
 // AABBのためのヘルパーメソッド
 impl AxisAlignedBox {
     // 衝突点から、どの面の法線かを計算する
+    #[allow(dead_code)]
     fn calculate_normal(&self, point: Vec3) -> Vec3 {
         let epsilon = 1e-4;
         let p_minus_min = point - self.min;

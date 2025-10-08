@@ -13,3 +13,5 @@ serde = { version = "1.0", features = ["derive"] }
 toml = "0.8"
 raytracing_core.workspace = true
 raytracing_config.workspace = true
+raytracing_renderer.workspace = true
+clap = { version = "4.5.10", features = ["derive"] }
